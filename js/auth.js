@@ -5,8 +5,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 export async function getCurrentSession() {
   const { data, error } = await supabase.auth.getSession();
-  if (error) return { session: null, error };
-  return { session: data.session, error: null };
+  return { session: data?.session || null, error: error || null };
 }
 
 export async function getCurrentProfile(userId) {
@@ -16,7 +15,7 @@ export async function getCurrentProfile(userId) {
     .eq("user_id", userId)
     .maybeSingle();
 
-  return { profile: data || null, error };
+  return { profile: data || null, error: error || null };
 }
 
 export async function requireCentralAccess() {
