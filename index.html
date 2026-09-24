@@ -3,59 +3,155 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Central de Auditoria Nissei</title>
+  <meta name="theme-color" content="#005b96">
+  <title>Central de Auditoria | Nissei</title>
   <link rel="stylesheet" href="css/central.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="brand-mark">N</div>
-      <div>
-        <strong>Central de Auditoria</strong>
-        <span>Nissei</span>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <img src="assets/logo/nissei.webp" alt="Nissei — mais que farmácia">
+        <div class="brand-divider"></div>
+        <div class="central-name">
+          <span>Central de</span>
+          <strong>Auditoria</strong>
+        </div>
       </div>
+
+      <nav class="main-nav" aria-label="Navegação principal">
+        <a class="nav-item active" href="./">
+          <span class="nav-icon">⌂</span>
+          <span>Início</span>
+        </a>
+        <a class="nav-item" href="modulos/pre-balanco/">
+          <span class="nav-icon">✓</span>
+          <span>Pré-Balanço</span>
+        </a>
+        <a class="nav-item" href="modulos/perdas/">
+          <span class="nav-icon">▥</span>
+          <span>Relatório de Perdas</span>
+        </a>
+        <a class="nav-item" href="modulos/filiais/">
+          <span class="nav-icon">⌂</span>
+          <span>Filiais</span>
+        </a>
+        <a class="nav-item" href="modulos/gestores/">
+          <span class="nav-icon">♙</span>
+          <span>Gestores</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <a class="nav-item muted-item" href="admin/">
+          <span class="nav-icon">⚙</span>
+          <span>Administração</span>
+        </a>
+        <div class="sidebar-version">Central de Auditoria • V1.0</div>
+      </div>
+    </aside>
+
+    <div class="main-area">
+      <header class="topbar">
+        <button class="menu-button" id="menuButton" type="button" aria-label="Abrir menu">☰</button>
+        <div class="topbar-title">
+          <span>Central de Auditoria</span>
+          <strong>Plataforma Nissei</strong>
+        </div>
+        <div class="user-area">
+          <div class="user-avatar">A</div>
+          <div class="user-info">
+            <strong>Ambiente inicial</strong>
+            <span>Autenticação em preparação</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="welcome">
+          <div>
+            <p class="eyebrow">NISSEI • AUDITORIA</p>
+            <h1>Central de Auditoria</h1>
+            <p class="welcome-text">
+              Um único ambiente para organizar os processos, registros e históricos da auditoria.
+            </p>
+          </div>
+          <div class="welcome-badge">
+            <span class="badge-dot"></span>
+            Ambiente operacional
+          </div>
+        </section>
+
+        <section class="section-heading">
+          <div>
+            <h2>Módulos</h2>
+            <p>Acesse as ferramentas disponíveis na Central.</p>
+          </div>
+        </section>
+
+        <section class="module-grid" aria-label="Módulos da Central">
+          <a class="module-card blue" href="modulos/pre-balanco/">
+            <div class="card-top">
+              <span class="module-icon">✓</span>
+              <span class="card-arrow">→</span>
+            </div>
+            <h3>Pré-Balanço</h3>
+            <p>Dossiê de Instrução Pré-Inventário e acompanhamento das etapas preparatórias.</p>
+            <span class="card-status">Módulo em integração</span>
+          </a>
+
+          <a class="module-card red" href="modulos/perdas/">
+            <div class="card-top">
+              <span class="module-icon">▥</span>
+              <span class="card-arrow">→</span>
+            </div>
+            <h3>Relatório de Perdas</h3>
+            <p>Indicadores, divergências, resultados e histórico dos inventários.</p>
+            <span class="card-status">Módulo em integração</span>
+          </a>
+
+          <a class="module-card yellow" href="modulos/filiais/">
+            <div class="card-top">
+              <span class="module-icon">⌂</span>
+              <span class="card-arrow">→</span>
+            </div>
+            <h3>Filiais</h3>
+            <p>Cadastro, identificação por código e histórico das filiais.</p>
+            <span class="card-status">Estrutura preparada</span>
+          </a>
+
+          <a class="module-card navy" href="modulos/gestores/">
+            <div class="card-top">
+              <span class="module-icon">♙</span>
+              <span class="card-arrow">→</span>
+            </div>
+            <h3>Gestores</h3>
+            <p>Cadastro, identificação por matrícula e histórico dos gestores.</p>
+            <span class="card-status">Estrutura preparada</span>
+          </a>
+        </section>
+
+        <section class="info-panel">
+          <div class="info-icon">i</div>
+          <div>
+            <strong>Central em construção</strong>
+            <p>
+              Esta é a base visual da plataforma. Os módulos funcionais serão integrados
+              individualmente, preservando suas versões e funcionalidades existentes.
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span>Central de Auditoria Nissei</span>
+        <span>Estrutura inicial • V1.0</span>
+      </footer>
     </div>
-    <div class="session" id="sessionArea">
-      <span class="session-status">Ambiente inicial</span>
-    </div>
-  </header>
+  </div>
 
-  <main class="container">
-    <section class="hero">
-      <p class="eyebrow">NISSEI • AUDITORIA</p>
-      <h1>Central de Auditoria</h1>
-      <p>Portal integrado para os módulos de auditoria.</p>
-    </section>
-
-    <section class="module-grid" aria-label="Módulos">
-      <a class="module-card" href="modulos/pre-balanco/">
-        <span class="module-icon">📋</span>
-        <span class="module-title">Pré-Balanço</span>
-        <span class="module-description">Dossiê de Instrução Pré-Inventário</span>
-      </a>
-
-      <a class="module-card" href="modulos/perdas/">
-        <span class="module-icon">📊</span>
-        <span class="module-title">Relatório de Perdas</span>
-        <span class="module-description">Análise e acompanhamento de perdas</span>
-      </a>
-
-      <a class="module-card" href="modulos/filiais/">
-        <span class="module-icon">🏢</span>
-        <span class="module-title">Filiais</span>
-        <span class="module-description">Cadastro e histórico de filiais</span>
-      </a>
-
-      <a class="module-card" href="modulos/gestores/">
-        <span class="module-icon">👥</span>
-        <span class="module-title">Gestores</span>
-        <span class="module-description">Cadastro e histórico de gestores</span>
-      </a>
-    </section>
-  </main>
-
-  <footer>
-    Central de Auditoria Nissei • V1.0 — estrutura inicial
-  </footer>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/central.js"></script>
 </body>
 </html>
