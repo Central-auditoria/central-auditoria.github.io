@@ -1,10 +1,61 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Central de Auditoria</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Central de Auditoria Nissei</title>
+  <link rel="stylesheet" href="css/central.css">
 </head>
 <body>
-    <h1>Central de Auditoria</h1>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">N</div>
+      <div>
+        <strong>Central de Auditoria</strong>
+        <span>Nissei</span>
+      </div>
+    </div>
+    <div class="session" id="sessionArea">
+      <span class="session-status">Ambiente inicial</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <p class="eyebrow">NISSEI • AUDITORIA</p>
+      <h1>Central de Auditoria</h1>
+      <p>Portal integrado para os módulos de auditoria.</p>
+    </section>
+
+    <section class="module-grid" aria-label="Módulos">
+      <a class="module-card" href="modulos/pre-balanco/">
+        <span class="module-icon">📋</span>
+        <span class="module-title">Pré-Balanço</span>
+        <span class="module-description">Dossiê de Instrução Pré-Inventário</span>
+      </a>
+
+      <a class="module-card" href="modulos/perdas/">
+        <span class="module-icon">📊</span>
+        <span class="module-title">Relatório de Perdas</span>
+        <span class="module-description">Análise e acompanhamento de perdas</span>
+      </a>
+
+      <a class="module-card" href="modulos/filiais/">
+        <span class="module-icon">🏢</span>
+        <span class="module-title">Filiais</span>
+        <span class="module-description">Cadastro e histórico de filiais</span>
+      </a>
+
+      <a class="module-card" href="modulos/gestores/">
+        <span class="module-icon">👥</span>
+        <span class="module-title">Gestores</span>
+        <span class="module-description">Cadastro e histórico de gestores</span>
+      </a>
+    </section>
+  </main>
+
+  <footer>
+    Central de Auditoria Nissei • V1.0 — estrutura inicial
+  </footer>
 </body>
 </html>
