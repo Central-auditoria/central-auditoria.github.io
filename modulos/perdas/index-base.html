@@ -502,7 +502,7 @@ function defaultEmailContent(){
   const money=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v)||0);
   return {
     subject:`Relatório de Auditoria de Perdas — Filial ${d.filial||'—'} — Ciclo ${d.cicloAtual||'—'}`,
-    message:`Bom dia!\n\nSegue relatório de auditoria de perdas da filial ${d.filial||'—'}, referente ao ${d.cicloAtual||'—'}, contendo os principais resultados da auditoria e a comparação com o ciclo anterior.\n\nGestor(a): ${d.gestor||'—'}\nFalta: ${money(d.falta)}\nSobra: ${money(d.sobra)}\nResultado Geral: ${money(d.geral)}\nIndicador Operacional: ${pct(d.indAtual||0)}\nResultado Final: ${pct(d.resAtual||0)}\n\nNo relatório em anexo, constam também os principais produtos relacionados às faltas e sobras identificadas durante a auditoria.\n\nAtenciosamente,\n${d.auditor||'—'}\nAuditor de Prevenção e Perdas`
+    message:`Bom dia!\n\nSegue relatório de auditoria de perdas da filial ${d.filial||'—'}, referente ao ${d.cicloAtual||'—'}, contendo os principais resultados da auditoria e a comparação com o ciclo anterior.\n\nGestor(a): ${d.gestor||'—'}\nFalta: ${money(d.falta)}\nSobra: ${money(d.sobra)}\nResultado Geral: ${money(d.geral)}\nVencidos e Danificados: ${pct(d.indAtual||0)}\nResultado Final: ${pct(d.resAtual||0)}\n\nNo relatório em anexo, constam também os principais produtos relacionados às faltas e sobras identificadas durante a auditoria.\n\nAtenciosamente,\n${d.auditor||'—'}\nAuditor de Prevenção e Perdas`
   };
 }
 function openEmailModal(){
