@@ -1,4 +1,126 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Relatório de Auditoria de Perdas — Nissei</title><script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script><script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Relatório de Auditoria de Perdas — Nissei</title><script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+
+// ============================================================
+// MINHA CONTA / ADMINISTRAÇÃO DE USUÁRIOS
+// ============================================================
+function roleLabel(role){ return role==='admin'?'👑 Administrador':'🕵️ Auditor'; }
+
+async function openAccountPanel(){
+  const panel=$('accountPanel'); if(!panel) return;
+  const user=await ensureAuthenticated(); if(!user) return;
+  $('accountNameInput').value=currentProfile?.nome || user.user_metadata?.nome || '';
+  $('accountEmail').textContent=user.email||'—';
+  $('accountRole').textContent=roleLabel(currentRole);
+  $('changePasswordForm').reset();
+  $('nameMessage').textContent=''; $('nameMessage').className='form-message';
+  $('passwordMessage').textContent=''; $('passwordMessage').className='form-message';
+  panel.style.display='flex';
+}
+function closeAccountPanel(){if($('accountPanel'))$('accountPanel').style.display='none';}
+async function saveOwnName(){
+  const nome=$('accountNameInput').value.trim(), msg=$('nameMessage'), btn=$('saveNameBtn');
+  msg.textContent=''; msg.className='form-message';
+  if(nome.length<2){msg.textContent='Informe um nome válido.';msg.className='form-message error';return;}
+  const user=await ensureAuthenticated(); if(!user)return;
+  btn.disabled=true; btn.textContent='Salvando…';
+  try{
+    const {data,error}=await supabaseClient.from('profiles').update({nome,atualizado_em:new Date().toISOString()}).eq('user_id',user.id).select('user_id,nome,email,perfil,criado_em,atualizado_em').single();
+    if(error)throw error;
+    currentProfile=data; msg.textContent='Nome atualizado com sucesso.'; msg.className='form-message success';
+  }catch(error){msg.textContent='Não foi possível atualizar o nome: '+(error.message||'erro inesperado.');msg.className='form-message error';}
+  finally{btn.disabled=false;btn.textContent='Salvar nome';}
+}
+async function changeOwnPassword(event){
+  event.preventDefault();
+  const next=$('newPassword').value, confirm=$('confirmPassword').value, current=$('currentPassword').value;
+  const btn=$('changePasswordBtn'),msg=$('passwordMessage'); msg.textContent='';msg.className='form-message';
+  if(next.length<8){msg.textContent='A nova senha precisa ter pelo menos 8 caracteres.';msg.className='form-message error';return;}
+  if(next!==confirm){msg.textContent='A confirmação da nova senha não confere.';msg.className='form-message error';return;}
+  if(next===current){msg.textContent='A nova senha deve ser diferente da senha atual.';msg.className='form-message error';return;}
+  btn.disabled=true;btn.textContent='Alterando…';
+  try{
+    const {error}=await supabaseClient.auth.updateUser({password:next,current_password:current});
+    if(error)throw error;
+    msg.textContent='Senha alterada com sucesso.';msg.className='form-message success';$('changePasswordForm').reset();
+  }catch(error){
+    let message=error?.message||'Não foi possível alterar a senha.';
+    if(/current.*password|invalid.*password|password.*incorrect/i.test(message))message='A senha atual está incorreta.';
+    msg.textContent=message;msg.className='form-message error';
+  }finally{btn.disabled=false;btn.textContent='Alterar senha';}
+}
+
+function openAdminPanel(){
+  if(currentRole!=='admin'){alert('Acesso restrito ao administrador.');return;}
+  $('adminPanel').style.display='flex';$('createUserForm').reset();$('createUserMessage').innerHTML='';loadAdminUsers();
+}
+function closeAdminPanel(){if($('adminPanel'))$('adminPanel').style.display='none';}
+async function loadAdminUsers(){
+  const box=$('adminUserList'); if(!box)return;
+  box.innerHTML='<div class="muted">Carregando usuários...</div>';
+  if(currentRole!=='admin')return;
+  const {data,error}=await supabaseClient.from('profiles').select('user_id,nome,email,perfil,criado_em,atualizado_em').order('nome',{ascending:true});
+  if(error){box.innerHTML='<div class="admin-error">Não foi possível carregar os usuários: '+esc(error.message)+'</div>';return;}
+  if(!data?.length){box.innerHTML='<div class="muted">Nenhum usuário cadastrado.</div>';return;}
+  box.innerHTML=data.map(u=>{
+    const self=u.user_id===currentUser?.id;
+    return `<div class="admin-user-row">\n      <div><input class="admin-name-input" data-user-name-input="${esc(u.user_id)}" value="${esc(u.nome||'')}" maxlength="120" ${self?'disabled':''} aria-label="Nome do usuário"><div class="muted">${esc(u.email||'')}</div></div>\n      <div><select class="admin-role-select" data-user-role="${esc(u.user_id)}" ${self?'disabled':''}><option value="auditor" ${u.perfil==='auditor'?'selected':''}>🕵️ Auditor</option><option value="admin" ${u.perfil==='admin'?'selected':''}>👑 Administrador</option></select></div>\n      <div class="muted">${self?'<span class="tag">Você</span>':'Criado: '+(u.criado_em?new Date(u.criado_em).toLocaleDateString('pt-BR'):'—')}</div>\n      <div class="admin-user-actions">${self?'<span class="muted">Sua conta</span>':`<button type="button" class="secondary admin-save-user" data-user-id="${esc(u.user_id)}">Salvar</button><button type="button" class="danger-btn" data-user-delete="${esc(u.user_id)}" data-user-name="${esc(u.nome||u.email||'este usuário')}">Excluir</button>`}</div>\n    </div>`;
+  }).join('');
+  box.querySelectorAll('.admin-save-user').forEach(btn=>btn.addEventListener('click',()=>saveManagedUser(btn.dataset.userId)));
+  box.querySelectorAll('[data-user-delete]').forEach(btn=>btn.addEventListener('click',()=>deleteInternalUser(btn.dataset.userDelete,btn.dataset.userName)));
+}
+async function saveManagedUser(userId){
+  if(currentRole!=='admin'||!userId)return;
+  const select=document.querySelector(`[data-user-role="${CSS.escape(userId)}"]`); if(!select)return;
+  const perfil=select.value;
+  const nameInput=document.querySelector(`[data-user-name-input="${CSS.escape(userId)}"]`);
+  const nome=(nameInput?.value||'').trim();
+  if(nome.length<2){alert('Informe um nome válido.');return;}
+  try{
+    const {error}=await supabaseClient.from('profiles').update({nome,perfil,atualizado_em:new Date().toISOString()}).eq('user_id',userId);
+    if(error)throw error;
+    alert('Perfil atualizado com sucesso.'); await loadAdminUsers();
+  }catch(error){alert('Não foi possível atualizar o perfil: '+(error.message||'erro inesperado.'));}
+}
+async function deleteInternalUser(userId,userName){
+  if(currentRole!=='admin'||!userId)return;
+  if(userId===currentUser?.id){alert('Por segurança, o administrador não pode excluir a própria conta por aqui.');return;}
+  if(!window.confirm(`Excluir o usuário ${userName||'selecionado'}?\n\nEssa ação removerá o acesso do usuário à plataforma e não pode ser desfeita.`))return;
+  try{
+    const {data:{session},error:sessionError}=await supabaseClient.auth.getSession();if(sessionError)throw sessionError;
+    if(!session?.access_token)throw new Error('Sessão de administrador não encontrada. Faça login novamente.');
+    const response=await fetch(`${SUPABASE_URL}/functions/v1/delete-admin-user`,{method:'POST',headers:{'Authorization':`Bearer ${session.access_token}`,'apikey':SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify({user_id:userId})});
+    let data=null;try{data=await response.json()}catch(_){ }
+    if(!response.ok||!data?.success)throw new Error(data?.error||data?.message||`A função retornou HTTP ${response.status}.`);
+    alert('Usuário excluído com sucesso.');await loadAdminUsers();
+  }catch(error){alert('Não foi possível excluir o usuário: '+(error.message||'erro inesperado.'));}
+}
+async function createInternalUser(event){
+  event.preventDefault(); if(currentRole!=='admin')return;
+  const nome=$('newUserName').value.trim(),email=$('newUserEmail').value.trim().toLowerCase(),perfil=$('newUserRole').value,senha=$('newUserPassword').value,senha2=$('newUserPassword2').value,btn=$('createUserBtn'),msg=$('createUserMessage');
+  msg.innerHTML='';
+  if(nome.length<2){msg.innerHTML='<div class="admin-error">Informe um nome válido.</div>';return;}
+  if(senha.length<8){msg.innerHTML='<div class="admin-error">A senha inicial precisa ter pelo menos 8 caracteres.</div>';return;}
+  if(senha!==senha2){msg.innerHTML='<div class="admin-error">As senhas não conferem.</div>';return;}
+  btn.disabled=true;btn.textContent='Criando…';
+  try{
+    const {data:{session},error:sessionError}=await supabaseClient.auth.getSession();if(sessionError)throw sessionError;if(!session?.access_token)throw new Error('Sessão de administrador não encontrada.');
+    const response=await fetch(`${SUPABASE_URL}/functions/v1/create-admin-user`,{method:'POST',headers:{'Authorization':`Bearer ${session.access_token}`,'apikey':SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify({nome,email,perfil,senha})});
+    let data=null;try{data=await response.json()}catch(_){ }
+    if(!response.ok||!data?.success)throw new Error(data?.error||data?.message||`A função retornou HTTP ${response.status}.`);
+    msg.innerHTML='<div class="admin-success">Usuário criado com sucesso.</div>';$('createUserForm').reset();await loadAdminUsers();
+  }catch(error){msg.innerHTML='<div class="admin-error">Não foi possível criar o usuário: '+esc(error.message||'erro inesperado.')+'</div>';}
+  finally{btn.disabled=false;btn.textContent='Criar usuário';}
+}
+
+$('accountBtn')?.addEventListener('click',openAccountPanel);
+$('adminBtn')?.addEventListener('click',openAdminPanel);
+$('closeAccountBtn')?.addEventListener('click',closeAccountPanel);
+$('closeAdminBtn')?.addEventListener('click',closeAdminPanel);
+$('saveNameBtn')?.addEventListener('click',saveOwnName);
+$('changePasswordForm')?.addEventListener('submit',changeOwnPassword);
+$('createUserForm')?.addEventListener('submit',createInternalUser);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAccountPanel();closeAdminPanel();}});
+</script><script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script><script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script><script src="https://accounts.google.com/gsi/client"></script><style>
 :root{--navy:#063B66;--blue:#0A5CA8;--yellow:#F5C400;--text:#17324D;--muted:#60758A;--red:#C62828;--green:#14804A;--line:#D9E4EC}
 *{box-sizing:border-box}body{margin:0;background:#eef2f5;color:var(--text);font-family:Arial,Helvetica,sans-serif}
@@ -130,9 +252,11 @@ button,.file{border:0;border-radius:10px;padding:12px 16px;font-weight:700;curso
 
 /* Lista de relatórios / reabertura */
 .reports-modal{position:fixed;inset:0;background:rgba(10,35,58,.48);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999}.reports-modal.open{display:flex}.reports-box{width:min(920px,100%);max-height:min(82vh,760px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(15,45,70,.24);padding:24px}.reports-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;border-bottom:1px solid #e4ebf0;padding-bottom:16px;margin-bottom:16px}.reports-head h2{margin:0;color:var(--navy);font-size:22px}.reports-head p{margin:6px 0 0;color:var(--muted);font-size:13px}.close-reports{border:0;background:#f1f5f8;color:var(--navy);width:36px;height:36px;border-radius:50%;font-size:22px;cursor:pointer}.reports-toolbar{display:flex;justify-content:flex-end;margin-bottom:14px}.report-list{display:grid;gap:10px}.report-list-empty{padding:30px;text-align:center;color:var(--muted);border:1px dashed #cbd9e2;border-radius:14px}.report-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px;border:1px solid #dfe8ee;border-radius:14px;background:#fbfdfe}.report-row:hover{border-color:#b8d1e1;background:#f8fbfd}.report-row-main{min-width:0}.report-row-title{font-weight:800;color:var(--navy);font-size:15px}.report-row-meta{margin-top:5px;color:var(--muted);font-size:12px;line-height:1.5}.report-row-status{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}.report-row-status.open{background:#fff7d6;color:#765900}.report-row-status.finalized{background:#eef6ff;color:var(--navy)}.report-row button{flex:0 0 auto}.reports-loading{text-align:center;padding:28px;color:var(--muted)}
+
+.modal-backdrop{position:fixed;inset:0;background:rgba(10,35,58,.48);display:flex;align-items:center;justify-content:center;padding:20px;z-index:10000;backdrop-filter:blur(3px)}.modal-card{position:relative;width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.22);padding:30px}.modal-close{position:absolute;right:16px;top:12px;border:0;background:transparent;font-size:30px;line-height:1;cursor:pointer;color:#5b6573}.modal-kicker{font-size:12px;font-weight:800;letter-spacing:.12em;color:#005b8f;margin-bottom:6px}.modal-card h2{margin:0 0 20px;color:var(--navy)}.modal-card h3{margin:0 0 8px;color:var(--navy)}.account-info{display:grid;gap:10px;margin-bottom:20px}.account-info div{background:#f5f8fc;border:1px solid #e3eaf3;border-radius:12px;padding:11px 14px}.account-info span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#738096;margin-bottom:3px}.account-info strong{color:#1c2d43}.modal-card hr{border:0;border-top:1px solid #e6ebf2;margin:22px 0}.modal-card label{display:block;font-weight:700;color:#27384d;margin:13px 0}.modal-card input,.modal-card select{display:block;width:100%;box-sizing:border-box;margin-top:7px;padding:12px 13px;border:1px solid #cfd8e5;border-radius:10px;font:inherit;outline:none}.password-hint{font-size:12px;color:#738096;margin:6px 0 16px}.form-message{margin-top:12px;min-height:20px;font-size:14px;font-weight:700}.form-message.success{color:#167447}.form-message.error{color:#b42318}.admin-modal-card{width:min(1000px,100%)}.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.admin-grid .full{grid-column:1/-1}.admin-user-list{display:grid;gap:9px;margin-top:15px}.admin-user-row{display:grid;grid-template-columns:1.4fr 1.1fr .9fr 1.2fr;gap:10px;align-items:center;border:1px solid #dce6ec;border-radius:12px;padding:12px 14px;background:#f9fbfc}.admin-user-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.admin-role-select{padding:7px 9px!important;margin-top:0!important;font-size:12px!important}.danger-btn{border:1px solid #d33b3b;background:#fff;color:#b42318;border-radius:8px;padding:7px 11px;font-weight:700;cursor:pointer}.danger-btn:hover{background:#fff1f1}.admin-section{margin-top:20px}.admin-section h3{margin:0 0 8px;color:var(--navy)}.admin-note{font-size:12px;color:#687984}.admin-success{color:#167447;background:#e8f7ee;border-radius:9px;padding:10px;margin-top:10px;font-weight:700}.admin-error{color:#842029;background:#f8d7da;border-radius:9px;padding:10px;margin-top:10px;font-weight:700}.report-row-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.reports-box{max-height:min(86vh,820px)}@media(max-width:760px){.admin-grid{grid-template-columns:1fr}.admin-grid .full{grid-column:auto}.admin-user-row{grid-template-columns:1fr}.modal-card{padding:22px 16px}.modal-backdrop{padding:10px}}
 </style></head><body>
 <div class="app"><div class="toolbar"><strong style="color:var(--navy);font-size:18px">Painel de Auditoria de Perdas</strong><span class="status" id="status">Preencha os dados e importe as duas bases Procfit.</span><div class="nav">
-<button class="secondary active" data-page="p1">1. Entrada</button><button class="secondary" data-page="p2">2. Painel</button><button class="secondary" data-page="p3">3. Análise</button><button class="primary" id="export">Exportar JPEG</button><button class="secondary" id="exportCurrentXlsx">📊 Divergências Atual — Excel/LibreOffice</button><button class="secondary" id="exportPdf">📄 Exportar painel em PDF</button><button class="secondary" id="share">📱 Compartilhar JPEG</button><button class="secondary" id="emailBtn">📧 Enviar por e-mail</button><button class="secondary" id="openReports">📂 Meus relatórios</button><button class="secondary" id="saveReport">💾 Salvar relatório</button><button class="primary" id="finalizeReport">🔒 Finalizar relatório</button><button class="secondary" id="reset">Limpar</button><span class="report-lock-status" id="reportLockStatus">🟡 Em andamento</span></div></div>
+<button class="secondary active" data-page="p1">1. Entrada</button><button class="secondary" data-page="p2">2. Painel</button><button class="secondary" data-page="p3">3. Análise</button><button class="primary" id="export">Exportar JPEG</button><button class="secondary" id="exportCurrentXlsx">📊 Divergências Atual — Excel/LibreOffice</button><button class="secondary" id="exportPdf">📄 Exportar painel em PDF</button><button class="secondary" id="share">📱 Compartilhar JPEG</button><button class="secondary" id="emailBtn">📧 Enviar por e-mail</button><button class="secondary" id="openReports">📂 Meus relatórios</button><button class="secondary" id="accountBtn">👤 Minha conta</button><button class="secondary" id="adminBtn" style="display:none">👑 Administração</button><button class="secondary" id="saveReport">💾 Salvar relatório</button><button class="primary" id="finalizeReport">🔒 Finalizar relatório</button><button class="secondary" id="reset">Limpar</button><span class="report-lock-status" id="reportLockStatus">🟡 Em andamento</span></div></div>
 <section class="page active" id="p1">
   <div id="readonlyNotice" class="readonly-note" style="display:none">🔒 Este relatório foi finalizado e está somente para consulta. Os dados registrados não podem mais ser alterados.</div>
   <div class="entry-hero">
@@ -214,7 +338,59 @@ button,.file{border:0;border-radius:10px;padding:12px 16px;font-weight:700;curso
   </div>
 </section><section class="page" id="p2"><div id="report" class="report"></div></section><section class="page" id="p3"><div class="page-wrap"><div id="analysisLossCard" class="analysis-loss-summary"></div><h2>Análise das divergências</h2><div class="sub">Itens com valor no ciclo atual acima de R$ 50,00, classificados pela comparação com o ciclo anterior.</div><div id="analysis"></div></div></section>
 </div>
-<div id="reportsModal" class="reports-modal" aria-hidden="true"><div class="reports-box" role="dialog" aria-modal="true" aria-labelledby="reportsTitle"><div class="reports-head"><div><h2 id="reportsTitle">Meus relatórios</h2><p>Relatórios criados pelo seu usuário. Relatórios finalizados ficam somente para consulta.</p></div><button type="button" class="close-reports" id="closeReports">×</button></div><div class="reports-toolbar"><button type="button" class="secondary" id="refreshReports">↻ Atualizar</button></div><div id="reportList" class="report-list"></div></div></div><div id="emailModal" class="email-modal" aria-hidden="true"><div class="email-box" role="dialog" aria-modal="true" aria-labelledby="emailTitle"><div class="email-head"><div><h2 id="emailTitle">Enviar relatório por e-mail</h2><p>O JPEG será gerado automaticamente e enviado pelo seu Gmail corporativo.</p></div><button type="button" class="close-email" id="closeEmail">×</button></div><label>Destinatário(s)<input id="emailTo" type="text" placeholder="exemplo@empresa.com.br, outro@empresa.com.br"></label><label>Assunto<input id="emailSubject" type="text"></label><label>Mensagem<textarea id="emailMessage" rows="5"></textarea></label><div class="email-note">🔒 As bases não são enviadas. Apenas o relatório JPEG é anexado.</div><div class="email-status" id="emailStatusTop">Clique em “Enviar relatório” para autorizar o Gmail e enviar o JPEG.</div><div class="email-actions"><button type="button" class="secondary" id="cancelEmail">Cancelar</button><button type="button" class="primary" id="sendEmail">📧 Enviar relatório</button></div><div class="email-status" id="emailStatus" style="display:none"></div></div></div>
+<div id="reportsModal" class="reports-modal" aria-hidden="true"><div class="reports-box" role="dialog" aria-modal="true" aria-labelledby="reportsTitle"><div class="reports-head"><div><h2 id="reportsTitle">Meus relatórios</h2><p id="reportsSubtitle">Relatórios criados pelo seu usuário. Relatórios finalizados ficam somente para consulta.</p></div><button type="button" class="close-reports" id="closeReports">×</button></div><div class="reports-toolbar"><button type="button" class="secondary" id="refreshReports">↻ Atualizar</button></div><div id="reportList" class="report-list"></div></div></div><div id="accountPanel" class="modal-backdrop" style="display:none;">
+  <div class="modal-card">
+    <button class="modal-close" id="closeAccountBtn" aria-label="Fechar">×</button>
+    <div class="modal-kicker">MINHA CONTA</div>
+    <h2>👤 Minha conta</h2>
+    <div class="account-info">
+      <div><span>Nome</span><input id="accountNameInput" type="text" maxlength="120" autocomplete="name" placeholder="Seu nome"><button type="button" class="primary" id="saveNameBtn" style="margin-top:9px">Salvar nome</button><div id="nameMessage" class="form-message" role="status"></div></div>
+      <div><span>E-mail</span><strong id="accountEmail">—</strong></div>
+      <div><span>Perfil</span><strong id="accountRole">—</strong></div>
+    </div>
+    <hr>
+    <h3>🔑 Alterar senha</h3>
+    <p class="muted">Sua senha é gerenciada pelo Supabase Auth. A nova senha será aplicada somente à sua própria conta.</p>
+    <form id="changePasswordForm">
+      <label>Senha atual<input id="currentPassword" type="password" autocomplete="current-password" required></label>
+      <label>Nova senha<input id="newPassword" type="password" autocomplete="new-password" minlength="8" required></label>
+      <label>Confirmar nova senha<input id="confirmPassword" type="password" autocomplete="new-password" minlength="8" required></label>
+      <div class="password-hint">Mínimo de 8 caracteres.</div>
+      <button class="primary" type="submit" id="changePasswordBtn">Alterar senha</button>
+      <div id="passwordMessage" class="form-message" role="status"></div>
+    </form>
+  </div>
+</div>
+
+<div id="adminPanel" class="modal-backdrop" style="display:none;">
+  <div class="modal-card admin-modal-card">
+    <button class="modal-close" id="closeAdminBtn" aria-label="Fechar">×</button>
+    <div class="modal-kicker">ADMINISTRAÇÃO</div>
+    <h2>👑 Gerenciamento de usuários</h2>
+    <p class="muted">Crie, altere perfil/nome e exclua usuários internos. A exclusão do usuário remove seu acesso à plataforma.</p>
+    <div class="admin-section">
+      <h3>➕ Novo usuário</h3>
+      <form id="createUserForm">
+        <div class="admin-grid">
+          <div><label>Nome<input id="newUserName" type="text" maxlength="120" autocomplete="name" required></label></div>
+          <div><label>E-mail corporativo<input id="newUserEmail" type="email" maxlength="180" autocomplete="email" required></label></div>
+          <div><label>Perfil<select id="newUserRole" required><option value="auditor">🕵️ Auditor</option><option value="admin">👑 Administrador</option></select></label></div>
+          <div><label>Senha inicial<input id="newUserPassword" type="password" minlength="8" autocomplete="new-password" required></label></div>
+          <div><label>Confirmar senha<input id="newUserPassword2" type="password" minlength="8" autocomplete="new-password" required></label></div>
+          <div class="full admin-note">A senha inicial poderá ser alterada pelo usuário em <b>Minha conta</b>.</div>
+        </div>
+        <div class="actions"><button class="primary" id="createUserBtn" type="submit">Criar usuário</button></div>
+        <div id="createUserMessage"></div>
+      </form>
+    </div>
+    <div class="admin-section">
+      <h3>👥 Usuários cadastrados</h3>
+      <div id="adminUserList" class="admin-user-list"><div class="muted">Carregando...</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="emailModal" class="email-modal" aria-hidden="true"><div class="email-box" role="dialog" aria-modal="true" aria-labelledby="emailTitle"><div class="email-head"><div><h2 id="emailTitle">Enviar relatório por e-mail</h2><p>O JPEG será gerado automaticamente e enviado pelo seu Gmail corporativo.</p></div><button type="button" class="close-email" id="closeEmail">×</button></div><label>Destinatário(s)<input id="emailTo" type="text" placeholder="exemplo@empresa.com.br, outro@empresa.com.br"></label><label>Assunto<input id="emailSubject" type="text"></label><label>Mensagem<textarea id="emailMessage" rows="5"></textarea></label><div class="email-note">🔒 As bases não são enviadas. Apenas o relatório JPEG é anexado.</div><div class="email-status" id="emailStatusTop">Clique em “Enviar relatório” para autorizar o Gmail e enviar o JPEG.</div><div class="email-actions"><button type="button" class="secondary" id="cancelEmail">Cancelar</button><button type="button" class="primary" id="sendEmail">📧 Enviar relatório</button></div><div class="email-status" id="emailStatus" style="display:none"></div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL="https://skfpqaxbypryztznakke.supabase.co";
@@ -226,6 +402,9 @@ let reportStatus='em_andamento';
 let finalizedSnapshot=null;
 let reportId=null;
 let currentUser=null;
+let currentRole=null;
+let currentProfile=null;
+let reportReadOnlyOverride=false;
 function readProcfitText(text){
   const clean=String(text||'').replace(/\r/g,'').trim();
   if(!clean)throw new Error('Cole uma base do Procfit antes de processar.');
@@ -344,6 +523,7 @@ function getReportSnapshot(){
 function restoreReportSnapshot(snapshot,status='em_andamento'){
   if(!snapshot) return false;
   reportStatus=status;
+  reportReadOnlyOverride=false;
   restoreEntrySnapshot(snapshot.entrada);
   baseAtual=cloneReportData(snapshot.baseAtual||[]);
   baseAnterior=cloneReportData(snapshot.baseAnterior||[]);
@@ -384,14 +564,14 @@ function updateFinalizationUI(finalized){
     btn.classList.toggle('readonly-button',finalized);
   }
   if(badge){
-    badge.textContent=finalized?'🔒 Finalizado':'🟡 Em andamento';
-    badge.classList.toggle('finalized',finalized);
+    badge.textContent=reportReadOnlyOverride && !finalized?'👁️ Consulta administrativa':(finalized?'🔒 Finalizado':'🟡 Em andamento');
+    badge.classList.toggle('finalized',finalized && !reportReadOnlyOverride);
   }
   if(notice) notice.style.display=finalized?'block':'none';
 }
 
 function applyReportMode(){
-  const finalized=reportStatus==='finalizado';
+  const finalized=reportStatus==='finalizado' || reportReadOnlyOverride;
   setEntryReadOnly(finalized);
   setPanelReadOnly(finalized);
   setAnalysisReadOnly(finalized);
@@ -413,6 +593,12 @@ async function ensureAuthenticated(){
     return null;
   }
   currentUser=user;
+  if(!currentRole){
+    const {data:profile}=await supabaseClient.from('profiles').select('user_id,nome,email,perfil,criado_em,atualizado_em').eq('user_id',user.id).maybeSingle();
+    currentProfile=profile || null;
+    currentRole=profile?.perfil || 'auditor';
+    const adminBtn=$('adminBtn'); if(adminBtn) adminBtn.style.display=currentRole==='admin'?'inline-flex':'none';
+  }
   return user;
 }
 
@@ -431,37 +617,61 @@ function closeReportsModal(){
 async function loadMyReports(){
   const list=$('reportList');
   if(!list) return;
-  list.innerHTML='<div class="reports-loading">Carregando seus relatórios…</div>';
+  list.innerHTML='<div class="reports-loading">Carregando relatórios…</div>';
   const user=await ensureAuthenticated();
   if(!user) return;
+  const isAdmin=currentRole==='admin';
+  $('reportsTitle').textContent=isAdmin?'Todos os relatórios':'Meus relatórios';
+  $('reportsSubtitle').textContent=isAdmin?'Visualização administrativa de todos os relatórios. Relatórios abertos por outro auditor ficam somente para consulta.':'Relatórios criados pelo seu usuário. Relatórios finalizados ficam somente para consulta.';
   try{
     const {data,error}=await supabaseClient
       .from('relatorios_perdas')
-      .select('id,created_at,updated_at,finalized_at,status,filial,gestor,matricula_gestor,ciclo_atual,ciclo_anterior')
+      .select('id,created_by,created_at,updated_at,finalized_at,status,filial,gestor,matricula_gestor,ciclo_atual,ciclo_anterior')
       .order('created_at',{ascending:false});
     if(error) throw error;
     if(!data?.length){
-      list.innerHTML='<div class="report-list-empty">Você ainda não possui relatórios salvos.</div>';
+      list.innerHTML=isAdmin?'<div class="report-list-empty">Nenhum relatório salvo.</div>':'<div class="report-list-empty">Você ainda não possui relatórios salvos.</div>';
       return;
     }
     list.innerHTML=data.map(r=>{
       const finalized=r.status==='finalizado';
+      const otherAuditor=isAdmin && r.created_by!==user.id;
       const title=`Filial ${esc(r.filial||'—')}`;
       const cycle=r.ciclo_atual?`Ciclo ${esc(r.ciclo_atual)}`:'Ciclo não informado';
       const gestor=r.gestor?`Gestor: ${esc(r.gestor)}`:'';
+      const mode=finalized?'🔒 Finalizado':otherAuditor?'👁️ Consulta administrativa':'🟡 Em andamento';
       return `<div class="report-row">
         <div class="report-row-main">
           <div class="report-row-title">${title}</div>
           <div class="report-row-meta">${cycle}${gestor?' • '+gestor:''}<br>Criado em ${formatDateTime(r.created_at)}${finalized?' • Finalizado em '+formatDateTime(r.finalized_at):' • Atualizado em '+formatDateTime(r.updated_at)}</div>
-          <span class="report-row-status ${finalized?'finalized':'open'}">${finalized?'🔒 Finalizado':'🟡 Em andamento'}</span>
+          <span class="report-row-status ${finalized?'finalized':'open'}">${mode}</span>
         </div>
-        <button type="button" class="primary" data-open-report="${esc(r.id)}">Abrir</button>
+        <div class="report-row-actions"><button type="button" class="primary" data-open-report="${esc(r.id)}">Abrir</button>${isAdmin?`<button type="button" class="danger-btn" data-delete-report="${esc(r.id)}" data-delete-label="${esc(title+' — '+cycle)}">Excluir</button>`:''}</div>
       </div>`;
     }).join('');
     list.querySelectorAll('[data-open-report]').forEach(btn=>btn.addEventListener('click',()=>openSavedReport(btn.dataset.openReport)));
+    list.querySelectorAll('[data-delete-report]').forEach(btn=>btn.addEventListener('click',()=>deleteReportAsAdmin(btn.dataset.deleteReport,btn.dataset.deleteLabel)));
   }catch(error){
     console.error(error);
     list.innerHTML=`<div class="report-list-empty">Erro ao carregar os relatórios: ${esc(error.message||'verifique sua conexão e permissões.')}</div>`;
+  }
+}
+
+async function deleteReportAsAdmin(id,label){
+  if(currentRole!=='admin' || !id) return;
+  const ok=window.confirm(`Excluir o relatório ${label||'selecionado'}?\n\nEsta ação apagará o registro e o snapshot do relatório do banco de dados. Ela não pode ser desfeita.`);
+  if(!ok) return;
+  try{
+    const {error}=await supabaseClient.from('relatorios_perdas').delete().eq('id',id);
+    if(error) throw error;
+    if(reportId===id){
+      reportId=null; reportStatus='em_andamento'; finalizedSnapshot=null; currentReport=null; baseAtual=[]; baseAnterior=[]; reportReadOnlyOverride=false; applyReportMode();
+      $('status').textContent='O relatório foi excluído. Crie ou abra outro relatório.';
+    }
+    await loadMyReports();
+  }catch(error){
+    console.error(error);
+    alert('Não foi possível excluir o relatório: '+(error.message||'verifique suas permissões.'));
   }
 }
 
@@ -481,13 +691,15 @@ async function openSavedReport(id){
   try{
     const {data,error}=await supabaseClient
       .from('relatorios_perdas')
-      .select('id,status,snapshot,created_at,updated_at,finalized_at')
+      .select('id,created_by,status,snapshot,created_at,updated_at,finalized_at')
       .eq('id',id)
       .single();
     if(error) throw error;
     if(!data?.snapshot) throw new Error('O relatório não possui um snapshot válido para restauração.');
     reportId=data.id;
     restoreReportSnapshot(data.snapshot,data.status);
+    reportReadOnlyOverride=currentRole==='admin' && data.created_by!==user.id;
+    applyReportMode();
     closeReportsModal();
     nav('p2');
     $('status').textContent=data.status==='finalizado'?'Relatório finalizado carregado em modo somente leitura.':'Relatório carregado. Você pode continuar a edição e salvar novamente.';
@@ -509,6 +721,10 @@ function reportListData(snapshot){
 }
 
 async function saveReport(){
+  if(reportReadOnlyOverride){
+    $('status').textContent='Este relatório está aberto em modo de consulta administrativa.';
+    return false;
+  }
   if(!ensureEditable()) return false;
   if(!currentReport){
     $('status').textContent='Gere o painel antes de salvar o relatório.';
@@ -563,7 +779,7 @@ async function saveReport(){
 }
 
 async function finalizeReport(){
-  if(reportStatus==='finalizado') return;
+  if(reportStatus==='finalizado' || reportReadOnlyOverride) return;
   if(!currentReport){
     $('status').textContent='Gere o painel antes de finalizar o relatório.';
     nav('p2');
@@ -914,6 +1130,6 @@ function renderBlank(){
 
 $('saveReport').addEventListener('click',saveReport);$('finalizeReport').addEventListener('click',finalizeReport);$('openReports').addEventListener('click',openReportsModal);$('closeReports').addEventListener('click',closeReportsModal);$('refreshReports').addEventListener('click',loadMyReports);$('reportsModal').addEventListener('click',e=>{if(e.target===$('reportsModal'))closeReportsModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeReportsModal()});
 $('export').addEventListener('click',exportJpeg);$('share').addEventListener('click',shareJpeg);$('exportCurrentXlsx').addEventListener('click',exportCurrentDivergenciasXlsx);$('exportPdf').addEventListener('click',exportPainelPdf);$('emailBtn').addEventListener('click',openEmailModal);$('closeEmail').addEventListener('click',closeEmailModal);$('cancelEmail').addEventListener('click',closeEmailModal);$('sendEmail').addEventListener('click',()=>{ sendEmailReport(); });$('emailModal').addEventListener('click',e=>{if(e.target.id==='emailModal')closeEmailModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeEmailModal()});
-$('reset').addEventListener('click',()=>{closeReportsModal();baseAtual=[];baseAnterior=[];['filial','gestor','auditor','cicloAtual','cicloAnt','fatAtual','indAtual','fatAnt','indAnt','resAntInput'].forEach(id=>$(id).value='');$('meta').value='0,60%';$('baseAtualStatus').textContent='';$('baseAntStatus').textContent='';$('baseAtualPaste').value='';$('baseAntPaste').value='';nav('p1');$('status').textContent='Preencha os dados e importe as duas bases Procfit.';render({filial:'—',gestor:'—',matriculaGestor:'',auditor:'—',cicloAtual:'—',cicloAnt:'—',fatAtual:0,fatAnt:0,indAtual:0,indAnt:0,resAtual:0,perdaLiquidaAtual:0,resAnt:0,meta:.006,falta:0,sobra:0,geral:0,setores:[],faltas:[],sobras:[]});renderAnalysis();reportStatus='em_andamento';finalizedSnapshot=null;reportId=null;currentUser=null;applyReportMode()});
+$('reset').addEventListener('click',()=>{closeReportsModal();baseAtual=[];baseAnterior=[];['filial','gestor','auditor','cicloAtual','cicloAnt','fatAtual','indAtual','fatAnt','indAnt','resAntInput'].forEach(id=>$(id).value='');$('meta').value='0,60%';$('baseAtualStatus').textContent='';$('baseAntStatus').textContent='';$('baseAtualPaste').value='';$('baseAntPaste').value='';nav('p1');$('status').textContent='Preencha os dados e importe as duas bases Procfit.';render({filial:'—',gestor:'—',matriculaGestor:'',auditor:'—',cicloAtual:'—',cicloAnt:'—',fatAtual:0,fatAnt:0,indAtual:0,indAnt:0,resAtual:0,perdaLiquidaAtual:0,resAnt:0,meta:.006,falta:0,sobra:0,geral:0,setores:[],faltas:[],sobras:[]});renderAnalysis();reportStatus='em_andamento';finalizedSnapshot=null;reportId=null;currentUser=null;currentRole=null;reportReadOnlyOverride=false;applyReportMode()});
 render({filial:'—',gestor:'—',matriculaGestor:'',auditor:'—',cicloAtual:'—',cicloAnt:'—',fatAtual:0,fatAnt:0,indAtual:0,indAnt:0,resAtual:0,resAnt:0,meta:.006,falta:0,sobra:0,geral:0,setores:[],faltas:[],sobras:[]});renderAnalysis();applyReportMode();
 </script></body></html>
