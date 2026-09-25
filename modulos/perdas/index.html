@@ -251,13 +251,6 @@ button,.file{border:0;border-radius:10px;padding:12px 16px;font-weight:700;curso
 
 .modal-backdrop{position:fixed;inset:0;background:rgba(10,35,58,.48);display:flex;align-items:center;justify-content:center;padding:20px;z-index:10000;backdrop-filter:blur(3px)}.modal-card{position:relative;width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.22);padding:30px}.modal-close{position:absolute;right:16px;top:12px;border:0;background:transparent;font-size:30px;line-height:1;cursor:pointer;color:#5b6573}.modal-kicker{font-size:12px;font-weight:800;letter-spacing:.12em;color:#005b8f;margin-bottom:6px}.modal-card h2{margin:0 0 20px;color:var(--navy)}.modal-card h3{margin:0 0 8px;color:var(--navy)}.account-info{display:grid;gap:10px;margin-bottom:20px}.account-info div{background:#f5f8fc;border:1px solid #e3eaf3;border-radius:12px;padding:11px 14px}.account-info span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#738096;margin-bottom:3px}.account-info strong{color:#1c2d43}.modal-card hr{border:0;border-top:1px solid #e6ebf2;margin:22px 0}.modal-card label{display:block;font-weight:700;color:#27384d;margin:13px 0}.modal-card input,.modal-card select{display:block;width:100%;box-sizing:border-box;margin-top:7px;padding:12px 13px;border:1px solid #cfd8e5;border-radius:10px;font:inherit;outline:none}.password-hint{font-size:12px;color:#738096;margin:6px 0 16px}.form-message{margin-top:12px;min-height:20px;font-size:14px;font-weight:700}.form-message.success{color:#167447}.form-message.error{color:#b42318}.admin-modal-card{width:min(1000px,100%)}.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.admin-grid .full{grid-column:1/-1}.admin-user-list{display:grid;gap:9px;margin-top:15px}.admin-user-row{display:grid;grid-template-columns:1.4fr 1.1fr .9fr 1.2fr;gap:10px;align-items:center;border:1px solid #dce6ec;border-radius:12px;padding:12px 14px;background:#f9fbfc}.admin-user-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.admin-role-select{padding:7px 9px!important;margin-top:0!important;font-size:12px!important}.danger-btn{border:1px solid #d33b3b;background:#fff;color:#b42318;border-radius:8px;padding:7px 11px;font-weight:700;cursor:pointer}.danger-btn:hover{background:#fff1f1}.admin-section{margin-top:20px}.admin-section h3{margin:0 0 8px;color:var(--navy)}.admin-note{font-size:12px;color:#687984}.admin-success{color:#167447;background:#e8f7ee;border-radius:9px;padding:10px;margin-top:10px;font-weight:700}.admin-error{color:#842029;background:#f8d7da;border-radius:9px;padding:10px;margin-top:10px;font-weight:700}.report-row-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.reports-box{max-height:min(86vh,820px)}@media(max-width:760px){.admin-grid{grid-template-columns:1fr}.admin-grid .full{grid-column:auto}.admin-user-row{grid-template-columns:1fr}.modal-card{padding:22px 16px}.modal-backdrop{padding:10px}}
 
-.central-home-btn{
-  display:inline-flex;
-  align-items:center;
-  gap:7px;
-  text-decoration:none;
-  white-space:nowrap;
-}
 .report-auditor{
   display:inline-flex;
   align-items:center;
@@ -271,9 +264,46 @@ button,.file{border:0;border-radius:10px;padding:12px 16px;font-weight:700;curso
   font-weight:800;
 }
 
+
+.central-navigation{
+  width:100%;
+  box-sizing:border-box;
+  padding:14px 22px 0;
+  display:flex;
+  justify-content:flex-start;
+  align-items:center;
+}
+.central-home-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  text-decoration:none;
+  white-space:nowrap;
+  border:1px solid #cbd9e2;
+  background:#fff;
+  color:var(--navy);
+  border-radius:10px;
+  padding:9px 13px;
+  font-weight:800;
+  font-size:12px;
+  box-shadow:0 3px 10px rgba(6,59,102,.08);
+  transition:.15s ease;
+}
+.central-home-btn:hover{
+  background:#f1f6fa;
+  border-color:#a9c5d8;
+  transform:translateY(-1px);
+}
+
 </style></head><body>
+<div class="central-navigation">
+  <a class="central-home-btn" href="../../central/" title="Voltar à página inicial da Central">
+    ← 🏠 Voltar à Central
+  </a>
+</div>
+
 <div class="app"><div class="toolbar"><strong style="color:var(--navy);font-size:18px">Painel de Auditoria de Perdas</strong><span class="status" id="status">Preencha os dados e importe as duas bases Procfit.</span><div class="nav">
-<button class="secondary active" data-page="p1">1. Entrada</button><button class="secondary" data-page="p2">2. Painel</button><button class="secondary" data-page="p3">3. Análise</button><button class="primary" id="export">Exportar JPEG</button><button class="secondary" id="exportCurrentXlsx">📊 Divergências Atual — Excel/LibreOffice</button><button class="secondary" id="exportPdf">📄 Exportar painel em PDF</button><button class="secondary" id="share">📱 Compartilhar JPEG</button><button class="secondary" id="emailBtn">📧 Enviar por e-mail</button><button class="secondary" id="openReports">📂 Meus relatórios</button><a class="secondary central-home-btn" href="../../central/" title="Voltar à página inicial da Central">🏠 Voltar à Central</a><button class="secondary" id="saveReport">💾 Salvar relatório</button><button class="primary" id="finalizeReport">🔒 Finalizar relatório</button><button class="secondary" id="reset">Limpar</button><span class="report-lock-status" id="reportLockStatus">🟡 Em andamento</span></div></div>
+<button class="secondary active" data-page="p1">1. Entrada</button><button class="secondary" data-page="p2">2. Painel</button><button class="secondary" data-page="p3">3. Análise</button><button class="primary" id="export">Exportar JPEG</button><button class="secondary" id="exportCurrentXlsx">📊 Divergências Atual — Excel/LibreOffice</button><button class="secondary" id="exportPdf">📄 Exportar painel em PDF</button><button class="secondary" id="share">📱 Compartilhar JPEG</button><button class="secondary" id="emailBtn">📧 Enviar por e-mail</button><button class="secondary" id="openReports">📂 Meus relatórios</button><button class="secondary" id="saveReport">💾 Salvar relatório</button><button class="primary" id="finalizeReport">🔒 Finalizar relatório</button><button class="secondary" id="reset">Limpar</button><span class="report-lock-status" id="reportLockStatus">🟡 Em andamento</span></div></div>
 <section class="page active" id="p1">
   <div id="readonlyNotice" class="readonly-note" style="display:none">🔒 Este relatório foi finalizado e está somente para consulta. Os dados registrados não podem mais ser alterados.</div>
   <div class="entry-hero">
