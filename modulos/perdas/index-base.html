@@ -604,17 +604,4 @@ $('reset').addEventListener('click',()=>{currentReport=null;renderBlank()});
 $('export').addEventListener('click',exportJpeg);$('share').addEventListener('click',shareJpeg);$('exportCurrentXlsx').addEventListener('click',exportCurrentDivergenciasXlsx);$('exportPdf').addEventListener('click',exportPainelPdf);$('emailBtn').addEventListener('click',openEmailModal);$('closeEmail').addEventListener('click',closeEmailModal);$('cancelEmail').addEventListener('click',closeEmailModal);$('sendEmail').addEventListener('click',()=>{ sendEmailReport(); });$('emailModal').addEventListener('click',e=>{if(e.target.id==='emailModal')closeEmailModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeEmailModal()});
 $('reset').addEventListener('click',()=>{baseAtual=[];baseAnterior=[];['filial','gestor','auditor','cicloAtual','cicloAnt','fatAtual','indAtual','fatAnt','indAnt','resAntInput'].forEach(id=>$(id).value='');$('meta').value='0,60%';$('baseAtualStatus').textContent='';$('baseAntStatus').textContent='';$('baseAtualPaste').value='';$('baseAntPaste').value='';nav('p1');$('status').textContent='Preencha os dados e importe as duas bases Procfit.';render({filial:'—',gestor:'—',matriculaGestor:'',auditor:'—',cicloAtual:'—',cicloAnt:'—',fatAtual:0,fatAnt:0,indAtual:0,indAnt:0,resAtual:0,perdaLiquidaAtual:0,resAnt:0,meta:.006,falta:0,sobra:0,geral:0,setores:[],faltas:[],sobras:[]});renderAnalysis();renderBaseTable('currentTable',[],'current');renderBaseTable('previousTable',[],'previous')});
 render({filial:'—',gestor:'—',matriculaGestor:'',auditor:'—',cicloAtual:'—',cicloAnt:'—',fatAtual:0,fatAnt:0,indAtual:0,indAnt:0,resAtual:0,resAnt:0,meta:.006,falta:0,sobra:0,geral:0,setores:[],faltas:[],sobras:[]});renderAnalysis();renderBaseTable('currentTable',[],'current');renderBaseTable('previousTable',[],'previous');
-</script><style id="central-save-style">
-#centralSaveReportBtn{position:fixed;right:18px;bottom:18px;z-index:99999;border:0;border-radius:10px;padding:12px 16px;background:#005b8f;color:#fff;font:700 13px Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.18);cursor:pointer}#centralSaveReportBtn:hover{background:#004b75}
-</style>
-<button id="centralSaveReportBtn" type="button" title="Salvar o relatório atual na Central">💾 Salvar relatório</button>
-<script>
-(function(){
- const btn=document.getElementById('centralSaveReportBtn'); if(!btn)return;
- btn.addEventListener('click',function(){
-   if(typeof currentReport==='undefined'||!currentReport){const s=document.getElementById('status');if(s)s.textContent='Gere o painel antes de salvar o relatório.';else alert('Gere o painel antes de salvar o relatório.');return;}
-   try{localStorage.setItem('central_auditoria_relatorio_rascunho',JSON.stringify(currentReport));const s=document.getElementById('status');if(s)s.textContent='Relatório preparado para salvamento na Central.';btn.textContent='✓ Relatório preparado';setTimeout(()=>btn.textContent='💾 Salvar relatório',1800)}catch(e){console.error(e);const s=document.getElementById('status');if(s)s.textContent='Não foi possível preparar o relatório para salvamento.';}
- });
-})();
-</script>
-</body></html>
+</script></body></html>
