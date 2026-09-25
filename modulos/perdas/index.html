@@ -127,9 +127,12 @@ button,.file{border:0;border-radius:10px;padding:12px 16px;font-weight:700;curso
 @media(max-width:600px){.form-grid-ident{grid-template-columns:1fr}}
 
 .report-lock-status{display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border-radius:999px;background:#fff7d6;color:#765900;font-size:12px;font-weight:800;border:1px solid #f1d77a}.report-lock-status.finalized{background:#eef6ff;color:var(--navy);border-color:#b9d5ef}.readonly-note{margin:12px 0;padding:10px 14px;border-radius:10px;background:#eef6ff;border:1px solid #c9dff3;color:var(--navy);font-size:13px;font-weight:700}.readonly-field{background:#f5f7f9!important;color:#536778!important;cursor:not-allowed}.readonly-button{opacity:.55;cursor:not-allowed!important}
+
+/* Lista de relatórios / reabertura */
+.reports-modal{position:fixed;inset:0;background:rgba(10,35,58,.48);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999}.reports-modal.open{display:flex}.reports-box{width:min(920px,100%);max-height:min(82vh,760px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(15,45,70,.24);padding:24px}.reports-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;border-bottom:1px solid #e4ebf0;padding-bottom:16px;margin-bottom:16px}.reports-head h2{margin:0;color:var(--navy);font-size:22px}.reports-head p{margin:6px 0 0;color:var(--muted);font-size:13px}.close-reports{border:0;background:#f1f5f8;color:var(--navy);width:36px;height:36px;border-radius:50%;font-size:22px;cursor:pointer}.reports-toolbar{display:flex;justify-content:flex-end;margin-bottom:14px}.report-list{display:grid;gap:10px}.report-list-empty{padding:30px;text-align:center;color:var(--muted);border:1px dashed #cbd9e2;border-radius:14px}.report-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px;border:1px solid #dfe8ee;border-radius:14px;background:#fbfdfe}.report-row:hover{border-color:#b8d1e1;background:#f8fbfd}.report-row-main{min-width:0}.report-row-title{font-weight:800;color:var(--navy);font-size:15px}.report-row-meta{margin-top:5px;color:var(--muted);font-size:12px;line-height:1.5}.report-row-status{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}.report-row-status.open{background:#fff7d6;color:#765900}.report-row-status.finalized{background:#eef6ff;color:var(--navy)}.report-row button{flex:0 0 auto}.reports-loading{text-align:center;padding:28px;color:var(--muted)}
 </style></head><body>
 <div class="app"><div class="toolbar"><strong style="color:var(--navy);font-size:18px">Painel de Auditoria de Perdas</strong><span class="status" id="status">Preencha os dados e importe as duas bases Procfit.</span><div class="nav">
-<button class="secondary active" data-page="p1">1. Entrada</button><button class="secondary" data-page="p2">2. Painel</button><button class="secondary" data-page="p3">3. Análise</button><button class="primary" id="export">Exportar JPEG</button><button class="secondary" id="exportCurrentXlsx">📊 Divergências Atual — Excel/LibreOffice</button><button class="secondary" id="exportPdf">📄 Exportar painel em PDF</button><button class="secondary" id="share">📱 Compartilhar JPEG</button><button class="secondary" id="emailBtn">📧 Enviar por e-mail</button><button class="secondary" id="saveReport">💾 Salvar relatório</button><button class="primary" id="finalizeReport">🔒 Finalizar relatório</button><button class="secondary" id="reset">Limpar</button><span class="report-lock-status" id="reportLockStatus">🟡 Em andamento</span></div></div>
+<button class="secondary active" data-page="p1">1. Entrada</button><button class="secondary" data-page="p2">2. Painel</button><button class="secondary" data-page="p3">3. Análise</button><button class="primary" id="export">Exportar JPEG</button><button class="secondary" id="exportCurrentXlsx">📊 Divergências Atual — Excel/LibreOffice</button><button class="secondary" id="exportPdf">📄 Exportar painel em PDF</button><button class="secondary" id="share">📱 Compartilhar JPEG</button><button class="secondary" id="emailBtn">📧 Enviar por e-mail</button><button class="secondary" id="openReports">📂 Meus relatórios</button><button class="secondary" id="saveReport">💾 Salvar relatório</button><button class="primary" id="finalizeReport">🔒 Finalizar relatório</button><button class="secondary" id="reset">Limpar</button><span class="report-lock-status" id="reportLockStatus">🟡 Em andamento</span></div></div>
 <section class="page active" id="p1">
   <div id="readonlyNotice" class="readonly-note" style="display:none">🔒 Este relatório foi finalizado e está somente para consulta. Os dados registrados não podem mais ser alterados.</div>
   <div class="entry-hero">
@@ -211,7 +214,7 @@ button,.file{border:0;border-radius:10px;padding:12px 16px;font-weight:700;curso
   </div>
 </section><section class="page" id="p2"><div id="report" class="report"></div></section><section class="page" id="p3"><div class="page-wrap"><div id="analysisLossCard" class="analysis-loss-summary"></div><h2>Análise das divergências</h2><div class="sub">Itens com valor no ciclo atual acima de R$ 50,00, classificados pela comparação com o ciclo anterior.</div><div id="analysis"></div></div></section>
 </div>
-<div id="emailModal" class="email-modal" aria-hidden="true"><div class="email-box" role="dialog" aria-modal="true" aria-labelledby="emailTitle"><div class="email-head"><div><h2 id="emailTitle">Enviar relatório por e-mail</h2><p>O JPEG será gerado automaticamente e enviado pelo seu Gmail corporativo.</p></div><button type="button" class="close-email" id="closeEmail">×</button></div><label>Destinatário(s)<input id="emailTo" type="text" placeholder="exemplo@empresa.com.br, outro@empresa.com.br"></label><label>Assunto<input id="emailSubject" type="text"></label><label>Mensagem<textarea id="emailMessage" rows="5"></textarea></label><div class="email-note">🔒 As bases não são enviadas. Apenas o relatório JPEG é anexado.</div><div class="email-status" id="emailStatusTop">Clique em “Enviar relatório” para autorizar o Gmail e enviar o JPEG.</div><div class="email-actions"><button type="button" class="secondary" id="cancelEmail">Cancelar</button><button type="button" class="primary" id="sendEmail">📧 Enviar relatório</button></div><div class="email-status" id="emailStatus" style="display:none"></div></div></div>
+<div id="reportsModal" class="reports-modal" aria-hidden="true"><div class="reports-box" role="dialog" aria-modal="true" aria-labelledby="reportsTitle"><div class="reports-head"><div><h2 id="reportsTitle">Meus relatórios</h2><p>Relatórios criados pelo seu usuário. Relatórios finalizados ficam somente para consulta.</p></div><button type="button" class="close-reports" id="closeReports">×</button></div><div class="reports-toolbar"><button type="button" class="secondary" id="refreshReports">↻ Atualizar</button></div><div id="reportList" class="report-list"></div></div></div><div id="emailModal" class="email-modal" aria-hidden="true"><div class="email-box" role="dialog" aria-modal="true" aria-labelledby="emailTitle"><div class="email-head"><div><h2 id="emailTitle">Enviar relatório por e-mail</h2><p>O JPEG será gerado automaticamente e enviado pelo seu Gmail corporativo.</p></div><button type="button" class="close-email" id="closeEmail">×</button></div><label>Destinatário(s)<input id="emailTo" type="text" placeholder="exemplo@empresa.com.br, outro@empresa.com.br"></label><label>Assunto<input id="emailSubject" type="text"></label><label>Mensagem<textarea id="emailMessage" rows="5"></textarea></label><div class="email-note">🔒 As bases não são enviadas. Apenas o relatório JPEG é anexado.</div><div class="email-status" id="emailStatusTop">Clique em “Enviar relatório” para autorizar o Gmail e enviar o JPEG.</div><div class="email-actions"><button type="button" class="secondary" id="cancelEmail">Cancelar</button><button type="button" class="primary" id="sendEmail">📧 Enviar relatório</button></div><div class="email-status" id="emailStatus" style="display:none"></div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL="https://skfpqaxbypryztznakke.supabase.co";
@@ -411,6 +414,87 @@ async function ensureAuthenticated(){
   }
   currentUser=user;
   return user;
+}
+
+function formatDateTime(value){
+  if(!value) return '—';
+  const d=new Date(value);
+  if(Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+}
+
+function closeReportsModal(){
+  const modal=$('reportsModal');
+  if(modal){modal.classList.remove('open');modal.setAttribute('aria-hidden','true');}
+}
+
+async function loadMyReports(){
+  const list=$('reportList');
+  if(!list) return;
+  list.innerHTML='<div class="reports-loading">Carregando seus relatórios…</div>';
+  const user=await ensureAuthenticated();
+  if(!user) return;
+  try{
+    const {data,error}=await supabaseClient
+      .from('relatorios_perdas')
+      .select('id,created_at,updated_at,finalized_at,status,filial,gestor,matricula_gestor,ciclo_atual,ciclo_anterior')
+      .order('created_at',{ascending:false});
+    if(error) throw error;
+    if(!data?.length){
+      list.innerHTML='<div class="report-list-empty">Você ainda não possui relatórios salvos.</div>';
+      return;
+    }
+    list.innerHTML=data.map(r=>{
+      const finalized=r.status==='finalizado';
+      const title=`Filial ${esc(r.filial||'—')}`;
+      const cycle=r.ciclo_atual?`Ciclo ${esc(r.ciclo_atual)}`:'Ciclo não informado';
+      const gestor=r.gestor?`Gestor: ${esc(r.gestor)}`:'';
+      return `<div class="report-row">
+        <div class="report-row-main">
+          <div class="report-row-title">${title}</div>
+          <div class="report-row-meta">${cycle}${gestor?' • '+gestor:''}<br>Criado em ${formatDateTime(r.created_at)}${finalized?' • Finalizado em '+formatDateTime(r.finalized_at):' • Atualizado em '+formatDateTime(r.updated_at)}</div>
+          <span class="report-row-status ${finalized?'finalized':'open'}">${finalized?'🔒 Finalizado':'🟡 Em andamento'}</span>
+        </div>
+        <button type="button" class="primary" data-open-report="${esc(r.id)}">Abrir</button>
+      </div>`;
+    }).join('');
+    list.querySelectorAll('[data-open-report]').forEach(btn=>btn.addEventListener('click',()=>openSavedReport(btn.dataset.openReport)));
+  }catch(error){
+    console.error(error);
+    list.innerHTML=`<div class="report-list-empty">Erro ao carregar os relatórios: ${esc(error.message||'verifique sua conexão e permissões.')}</div>`;
+  }
+}
+
+async function openReportsModal(){
+  const modal=$('reportsModal');
+  if(!modal) return;
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+  await loadMyReports();
+}
+
+async function openSavedReport(id){
+  if(!id) return;
+  $('status').textContent='Abrindo relatório…';
+  const user=await ensureAuthenticated();
+  if(!user) return;
+  try{
+    const {data,error}=await supabaseClient
+      .from('relatorios_perdas')
+      .select('id,status,snapshot,created_at,updated_at,finalized_at')
+      .eq('id',id)
+      .single();
+    if(error) throw error;
+    if(!data?.snapshot) throw new Error('O relatório não possui um snapshot válido para restauração.');
+    reportId=data.id;
+    restoreReportSnapshot(data.snapshot,data.status);
+    closeReportsModal();
+    nav('p2');
+    $('status').textContent=data.status==='finalizado'?'Relatório finalizado carregado em modo somente leitura.':'Relatório carregado. Você pode continuar a edição e salvar novamente.';
+  }catch(error){
+    console.error(error);
+    $('status').textContent='Erro ao abrir o relatório: '+(error.message||'verifique sua conexão e permissões.');
+  }
 }
 
 function reportListData(snapshot){
@@ -828,8 +912,8 @@ function renderBlank(){
   $('status').textContent='Aguardando a planilha da filial…';
 }
 
-$('saveReport').addEventListener('click',saveReport);$('finalizeReport').addEventListener('click',finalizeReport);
+$('saveReport').addEventListener('click',saveReport);$('finalizeReport').addEventListener('click',finalizeReport);$('openReports').addEventListener('click',openReportsModal);$('closeReports').addEventListener('click',closeReportsModal);$('refreshReports').addEventListener('click',loadMyReports);$('reportsModal').addEventListener('click',e=>{if(e.target===$('reportsModal'))closeReportsModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeReportsModal()});
 $('export').addEventListener('click',exportJpeg);$('share').addEventListener('click',shareJpeg);$('exportCurrentXlsx').addEventListener('click',exportCurrentDivergenciasXlsx);$('exportPdf').addEventListener('click',exportPainelPdf);$('emailBtn').addEventListener('click',openEmailModal);$('closeEmail').addEventListener('click',closeEmailModal);$('cancelEmail').addEventListener('click',closeEmailModal);$('sendEmail').addEventListener('click',()=>{ sendEmailReport(); });$('emailModal').addEventListener('click',e=>{if(e.target.id==='emailModal')closeEmailModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeEmailModal()});
-$('reset').addEventListener('click',()=>{baseAtual=[];baseAnterior=[];['filial','gestor','auditor','cicloAtual','cicloAnt','fatAtual','indAtual','fatAnt','indAnt','resAntInput'].forEach(id=>$(id).value='');$('meta').value='0,60%';$('baseAtualStatus').textContent='';$('baseAntStatus').textContent='';$('baseAtualPaste').value='';$('baseAntPaste').value='';nav('p1');$('status').textContent='Preencha os dados e importe as duas bases Procfit.';render({filial:'—',gestor:'—',matriculaGestor:'',auditor:'—',cicloAtual:'—',cicloAnt:'—',fatAtual:0,fatAnt:0,indAtual:0,indAnt:0,resAtual:0,perdaLiquidaAtual:0,resAnt:0,meta:.006,falta:0,sobra:0,geral:0,setores:[],faltas:[],sobras:[]});renderAnalysis();reportStatus='em_andamento';finalizedSnapshot=null;reportId=null;currentUser=null;applyReportMode()});
+$('reset').addEventListener('click',()=>{closeReportsModal();baseAtual=[];baseAnterior=[];['filial','gestor','auditor','cicloAtual','cicloAnt','fatAtual','indAtual','fatAnt','indAnt','resAntInput'].forEach(id=>$(id).value='');$('meta').value='0,60%';$('baseAtualStatus').textContent='';$('baseAntStatus').textContent='';$('baseAtualPaste').value='';$('baseAntPaste').value='';nav('p1');$('status').textContent='Preencha os dados e importe as duas bases Procfit.';render({filial:'—',gestor:'—',matriculaGestor:'',auditor:'—',cicloAtual:'—',cicloAnt:'—',fatAtual:0,fatAnt:0,indAtual:0,indAnt:0,resAtual:0,perdaLiquidaAtual:0,resAnt:0,meta:.006,falta:0,sobra:0,geral:0,setores:[],faltas:[],sobras:[]});renderAnalysis();reportStatus='em_andamento';finalizedSnapshot=null;reportId=null;currentUser=null;applyReportMode()});
 render({filial:'—',gestor:'—',matriculaGestor:'',auditor:'—',cicloAtual:'—',cicloAnt:'—',fatAtual:0,fatAnt:0,indAtual:0,indAnt:0,resAtual:0,resAnt:0,meta:.006,falta:0,sobra:0,geral:0,setores:[],faltas:[],sobras:[]});renderAnalysis();applyReportMode();
 </script></body></html>
