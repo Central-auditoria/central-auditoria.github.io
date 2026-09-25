@@ -277,7 +277,7 @@ function render(d){
     <div class="card"><div class="ct">TOTAL DE FALTAS</div><div class="cv red">${brl(d.falta)}</div><div class="cs">Base de dados</div></div>
     <div class="card"><div class="ct">TOTAL DE SOBRAS</div><div class="cv green">${brl(d.sobra)}</div><div class="cs">Base de dados</div></div>
     <div class="card"><div class="ct">RESULTADO GERAL</div><div class="cv navy">${brl(d.geral)}</div><div class="cs">Falta + Sobra</div></div></div>
-  <div class="cards2"><div class="card"><div class="ct">Vencidos e Danificados</div><div class="cv" style="color:var(--blue)">${pct(d.indAtual)}</div><div class="cs"></div></div></div>
+  <div class="cards2"><div class="card"><div class="ct">INDICADOR OPERACIONAL</div><div class="cv" style="color:var(--blue)">${pct(d.indAtual)}</div><div class="cs">Vencidos + Danificados + Ajuste de Estoque</div></div></div>
   <div class="section-title">COMPARATIVO — CICLO ATUAL × CICLO ANTERIOR</div>
   <div class="compare"><div class="grid head"><span>INDICADOR</span><span>ANTERIOR</span><span>ATUAL</span><span>VARIAÇÃO</span></div>
     <div class="grid row"><span>Faturamento</span><span>${brl(d.fatAnt)}</span><span>${brl(d.fatAtual)}</span><span style="color:${d.fatAtual >= d.fatAnt ? 'var(--green)' : 'var(--red)'}">${d.fatAnt ? ((d.fatAtual/d.fatAnt-1)*100 >= 0 ? '+' : '') + ((d.fatAtual/d.fatAnt-1)*100).toFixed(1).replace('.',',') + '%' : '—'}</span></div>
@@ -502,7 +502,7 @@ function defaultEmailContent(){
   const money=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v)||0);
   return {
     subject:`Relatório de Auditoria de Perdas — Filial ${d.filial||'—'} — Ciclo ${d.cicloAtual||'—'}`,
-    message:`Bom dia!\n\nSegue relatório de auditoria de perdas da filial ${d.filial||'—'}, referente ao ${d.cicloAtual||'—'}, contendo os principais resultados da auditoria e a comparação com o ciclo anterior.\n\nGestor(a): ${d.gestor||'—'}\nFalta: ${money(d.falta)}\nSobra: ${money(d.sobra)}\nResultado Geral: ${money(d.geral)}\nVencidos e Danificados: ${pct(d.indAtual||0)}\nResultado Final: ${pct(d.resAtual||0)}\n\nNo relatório em anexo, constam também os principais produtos relacionados às faltas e sobras identificadas durante a auditoria.\n\nAtenciosamente,\n${d.auditor||'—'}\nAuditor de Prevenção e Perdas`
+    message:`Bom dia!\n\nSegue relatório de auditoria de perdas da filial ${d.filial||'—'}, referente ao ${d.cicloAtual||'—'}, contendo os principais resultados da auditoria e a comparação com o ciclo anterior.\n\nGestor(a): ${d.gestor||'—'}\nFalta: ${money(d.falta)}\nSobra: ${money(d.sobra)}\nResultado Geral: ${money(d.geral)}\nIndicador Operacional: ${pct(d.indAtual||0)}\nResultado Final: ${pct(d.resAtual||0)}\n\nNo relatório em anexo, constam também os principais produtos relacionados às faltas e sobras identificadas durante a auditoria.\n\nAtenciosamente,\n${d.auditor||'—'}\nAuditor de Prevenção e Perdas`
   };
 }
 function openEmailModal(){
