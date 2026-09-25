@@ -419,6 +419,11 @@
   <script type="module">
     import { supabase } from "../js/auth.js";
 
+    // Configuração do mesmo projeto Supabase já utilizado pela Central.
+    // Estas são as chaves públicas do projeto; não são chaves administrativas.
+    const SUPABASE_URL = "https://skfpqaxbypryztznakke.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Cdgo8O0bLb1Jd1uTuhlp1A_qTJpbbXj";
+
     const $ = (id) => document.getElementById(id);
     let currentUser = null;
     let currentProfile = null;
