@@ -6,6 +6,173 @@
   <meta name="theme-color" content="#005b96">
   <title>Central de Auditoria | Nissei</title>
   <link rel="stylesheet" href="../css/central.css">
+
+<style>
+.account-nav-button{
+  width:100%;
+  text-align:left;
+  font:inherit;
+  cursor:pointer;
+  border:0;
+}
+.account-modal{
+  position:fixed;
+  inset:0;
+  z-index:5000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(7,30,48,.55);
+}
+.account-modal.open{display:flex}
+.account-card{
+  width:min(760px,100%);
+  max-height:90vh;
+  overflow:auto;
+  background:#fff;
+  border-radius:20px;
+  box-shadow:0 24px 70px rgba(0,0,0,.25);
+  padding:28px;
+  position:relative;
+}
+.account-close{
+  position:absolute;
+  right:15px;
+  top:10px;
+  border:0;
+  background:transparent;
+  color:#60758A;
+  font-size:28px;
+  cursor:pointer;
+}
+.account-eyebrow{
+  margin:0 0 6px;
+  color:#0A5CA8;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.08em;
+}
+.account-card h2{
+  margin:0;
+  color:#063B66;
+  font-size:25px;
+}
+.account-card h3{
+  margin:24px 0 12px;
+  color:#063B66;
+}
+.account-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-top:18px;
+}
+.account-field label{
+  display:block;
+  font-size:12px;
+  font-weight:800;
+  color:#17324D;
+}
+.account-field input,.account-field select{
+  width:100%;
+  box-sizing:border-box;
+  margin-top:6px;
+  padding:11px 12px;
+  border:1px solid #CFDBE4;
+  border-radius:10px;
+  font:inherit;
+  color:#17324D;
+}
+.account-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:14px;
+}
+.account-btn{
+  border:0;
+  border-radius:10px;
+  padding:11px 15px;
+  font-weight:800;
+  cursor:pointer;
+}
+.account-btn.primary{background:#0A5CA8;color:#fff}
+.account-btn.secondary{background:#EDF3F8;color:#17324D}
+.account-btn.danger{background:#C62828;color:#fff}
+.account-message{
+  min-height:20px;
+  margin-top:10px;
+  font-size:13px;
+  font-weight:700;
+}
+.account-message.success{color:#14804A}
+.account-message.error{color:#C62828}
+.account-divider{
+  border:0;
+  border-top:1px solid #D9E4EC;
+  margin:24px 0;
+}
+.admin-section{display:none}
+.admin-section.visible{display:block}
+.admin-user-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:12px;
+}
+.admin-user-row{
+  display:grid;
+  grid-template-columns:1.6fr 1fr .7fr auto;
+  gap:10px;
+  align-items:center;
+  border:1px solid #D9E4EC;
+  border-radius:12px;
+  padding:10px;
+}
+.admin-user-row input,.admin-user-row select{
+  width:100%;
+  box-sizing:border-box;
+  padding:9px 10px;
+  border:1px solid #CFDBE4;
+  border-radius:8px;
+}
+.admin-user-row .muted{
+  font-size:11px;
+  color:#60758A;
+}
+.admin-user-actions{
+  display:flex;
+  gap:6px;
+  justify-content:flex-end;
+}
+.admin-user-actions button{
+  border:0;
+  border-radius:8px;
+  padding:8px 10px;
+  font-weight:800;
+  cursor:pointer;
+}
+.admin-user-actions .save{background:#EDF3F8;color:#17324D}
+.admin-user-actions .delete{background:#FDECEC;color:#C62828}
+.admin-create{
+  margin-top:14px;
+  padding:16px;
+  border:1px solid #D9E4EC;
+  border-radius:14px;
+  background:#F8FAFC;
+}
+.admin-create-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+@media(max-width:700px){
+  .account-grid,.admin-create-grid,.admin-user-row{grid-template-columns:1fr}
+  .admin-user-actions{justify-content:flex-start}
+}
+</style>
+
 </head>
 <body>
   <div class="app-shell">
@@ -43,10 +210,10 @@
       </nav>
 
       <div class="sidebar-bottom">
-        <a class="nav-item muted-item" href="../admin/">
-          <span class="nav-icon">⚙</span>
-          <span>Administração</span>
-        </a>
+        <button class="nav-item muted-item account-nav-button" id="accountBtn" type="button">
+          <span class="nav-icon">👤</span>
+          <span>Minha conta</span>
+        </button>
         <div class="sidebar-version">Central de Auditoria • V1.0<br><span>Desenvolvido por Diego Nicolato</span></div>
       </div>
     </aside>
@@ -151,6 +318,500 @@
     </div>
   </div>
 
+
+  <div class="account-modal" id="accountModal" aria-hidden="true">
+    <div class="account-card" role="dialog" aria-modal="true" aria-labelledby="accountTitle">
+      <button class="account-close" id="closeAccountBtn" type="button" aria-label="Fechar">×</button>
+
+      <p class="account-eyebrow">CENTRAL DE AUDITORIA • CONTA</p>
+      <h2 id="accountTitle">Minha conta</h2>
+
+      <div class="account-grid">
+        <div class="account-field">
+          <label for="accountNameInput">Nome</label>
+          <input id="accountNameInput" type="text" maxlength="120" autocomplete="name">
+        </div>
+        <div class="account-field">
+          <label>E-mail</label>
+          <div id="accountEmail" style="padding:11px 0;color:#60758A">—</div>
+        </div>
+        <div class="account-field">
+          <label>Perfil</label>
+          <div id="accountRole" style="padding:11px 0;color:#60758A">—</div>
+        </div>
+      </div>
+
+      <div class="account-actions">
+        <button class="account-btn primary" id="saveNameBtn" type="button">Salvar nome</button>
+      </div>
+      <div class="account-message" id="nameMessage"></div>
+
+      <hr class="account-divider">
+
+      <h3>Alterar senha</h3>
+      <div class="account-grid">
+        <div class="account-field">
+          <label for="currentPassword">Senha atual</label>
+          <input id="currentPassword" type="password" autocomplete="current-password">
+        </div>
+        <div></div>
+        <div class="account-field">
+          <label for="newPassword">Nova senha</label>
+          <input id="newPassword" type="password" minlength="8" autocomplete="new-password">
+        </div>
+        <div class="account-field">
+          <label for="confirmPassword">Confirmar nova senha</label>
+          <input id="confirmPassword" type="password" minlength="8" autocomplete="new-password">
+        </div>
+      </div>
+      <div class="account-actions">
+        <button class="account-btn primary" id="changePasswordBtn" type="button">Alterar senha</button>
+      </div>
+      <div class="account-message" id="passwordMessage"></div>
+
+      <section class="admin-section" id="adminSection">
+        <hr class="account-divider">
+
+        <p class="account-eyebrow">ACESSO ADMINISTRATIVO</p>
+        <h3>Gerenciar usuários</h3>
+
+        <div class="admin-create">
+          <strong>Criar usuário</strong>
+          <div class="admin-create-grid" style="margin-top:12px">
+            <div class="account-field">
+              <label for="newUserName">Nome</label>
+              <input id="newUserName" type="text" maxlength="120">
+            </div>
+            <div class="account-field">
+              <label for="newUserEmail">E-mail</label>
+              <input id="newUserEmail" type="email" autocomplete="off">
+            </div>
+            <div class="account-field">
+              <label for="newUserRole">Perfil</label>
+              <select id="newUserRole">
+                <option value="auditor">Auditor</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
+            <div class="account-field">
+              <label for="newUserPassword">Senha inicial</label>
+              <input id="newUserPassword" type="password" minlength="8" autocomplete="new-password">
+            </div>
+            <div class="account-field">
+              <label for="newUserPassword2">Confirmar senha</label>
+              <input id="newUserPassword2" type="password" minlength="8" autocomplete="new-password">
+            </div>
+          </div>
+          <div class="account-actions">
+            <button class="account-btn primary" id="createUserBtn" type="button">Criar usuário</button>
+          </div>
+          <div class="account-message" id="createUserMessage"></div>
+        </div>
+
+        <h3>Usuários cadastrados</h3>
+        <div class="admin-user-list" id="adminUserList"></div>
+      </section>
+    </div>
+  </div>
+
   <script type="module" src="../js/central.js"></script>
+
+  <script type="module">
+    import { supabase } from "../js/auth.js";
+
+    const $ = (id) => document.getElementById(id);
+    let currentUser = null;
+    let currentProfile = null;
+    let currentRole = null;
+
+    function roleLabel(role) {
+      return role === "admin" ? "Administrador" : "Auditor";
+    }
+
+    function esc(value) {
+      return String(value ?? "").replace(/[&<>"']/g, ch => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[ch]));
+    }
+
+    function showMsg(id, text, type = "") {
+      const el = $(id);
+      if (!el) return;
+      el.textContent = text;
+      el.className = "account-message" + (type ? " " + type : "");
+    }
+
+    async function loadAccount() {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+
+      if (!user) {
+        window.location.replace("../");
+        return false;
+      }
+
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("user_id,nome,email,perfil,criado_em,atualizado_em")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error || !profile || !["admin", "auditor"].includes(profile.perfil)) {
+        await supabase.auth.signOut();
+        window.location.replace("../");
+        return false;
+      }
+
+      currentUser = user;
+      currentProfile = profile;
+      currentRole = profile.perfil;
+
+      $("accountNameInput").value = profile.nome || "";
+      $("accountEmail").textContent = profile.email || user.email || "—";
+      $("accountRole").textContent = roleLabel(profile.perfil);
+
+      $("adminSection").classList.toggle("visible", currentRole === "admin");
+
+      if (currentRole === "admin") {
+        await loadAdminUsers();
+      }
+
+      return true;
+    }
+
+    async function openAccount() {
+      if (!(await loadAccount())) return;
+
+      $("currentPassword").value = "";
+      $("newPassword").value = "";
+      $("confirmPassword").value = "";
+      showMsg("nameMessage", "");
+      showMsg("passwordMessage", "");
+      showMsg("createUserMessage", "");
+
+      $("accountModal").classList.add("open");
+      $("accountModal").setAttribute("aria-hidden", "false");
+    }
+
+    function closeAccount() {
+      $("accountModal").classList.remove("open");
+      $("accountModal").setAttribute("aria-hidden", "true");
+    }
+
+    async function saveOwnName() {
+      const nome = $("accountNameInput").value.trim();
+
+      if (nome.length < 2) {
+        showMsg("nameMessage", "Informe um nome válido.", "error");
+        return;
+      }
+
+      const btn = $("saveNameBtn");
+      btn.disabled = true;
+      btn.textContent = "Salvando...";
+
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .update({
+            nome,
+            atualizado_em: new Date().toISOString()
+          })
+          .eq("user_id", currentUser.id)
+          .select("user_id,nome,email,perfil,criado_em,atualizado_em")
+          .single();
+
+        if (error) throw error;
+
+        currentProfile = data;
+        $("accountNameInput").value = data.nome || "";
+        showMsg("nameMessage", "Nome atualizado com sucesso.", "success");
+      } catch (error) {
+        showMsg("nameMessage", "Não foi possível atualizar o nome: " + (error.message || "erro inesperado."), "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Salvar nome";
+      }
+    }
+
+    async function changeOwnPassword() {
+      const current = $("currentPassword").value;
+      const next = $("newPassword").value;
+      const confirm = $("confirmPassword").value;
+
+      if (!current) {
+        showMsg("passwordMessage", "Informe a senha atual.", "error");
+        return;
+      }
+      if (next.length < 8) {
+        showMsg("passwordMessage", "A nova senha precisa ter pelo menos 8 caracteres.", "error");
+        return;
+      }
+      if (next !== confirm) {
+        showMsg("passwordMessage", "A confirmação da nova senha não confere.", "error");
+        return;
+      }
+      if (next === current) {
+        showMsg("passwordMessage", "A nova senha deve ser diferente da senha atual.", "error");
+        return;
+      }
+
+      const btn = $("changePasswordBtn");
+      btn.disabled = true;
+      btn.textContent = "Alterando...";
+
+      try {
+        // Confirma a senha atual antes de alterar.
+        const { error: verifyError } = await supabase.auth.signInWithPassword({
+          email: currentUser.email,
+          password: current
+        });
+
+        if (verifyError) throw new Error("A senha atual está incorreta.");
+
+        const { error } = await supabase.auth.updateUser({ password: next });
+        if (error) throw error;
+
+        $("currentPassword").value = "";
+        $("newPassword").value = "";
+        $("confirmPassword").value = "";
+        showMsg("passwordMessage", "Senha alterada com sucesso.", "success");
+      } catch (error) {
+        showMsg("passwordMessage", error.message || "Não foi possível alterar a senha.", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Alterar senha";
+      }
+    }
+
+    async function loadAdminUsers() {
+      if (currentRole !== "admin") return;
+
+      const box = $("adminUserList");
+      box.innerHTML = '<div class="muted">Carregando usuários...</div>';
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id,nome,email,perfil,criado_em,atualizado_em")
+        .order("nome", { ascending: true });
+
+      if (error) {
+        box.innerHTML = '<div class="account-message error">Não foi possível carregar os usuários: ' + esc(error.message) + '</div>';
+        return;
+      }
+
+      if (!data?.length) {
+        box.innerHTML = '<div class="muted">Nenhum usuário cadastrado.</div>';
+        return;
+      }
+
+      box.innerHTML = data.map(user => {
+        const self = user.user_id === currentUser?.id;
+
+        return `
+          <div class="admin-user-row">
+            <div>
+              <input data-user-name="${esc(user.user_id)}"
+                     value="${esc(user.nome || "")}"
+                     maxlength="120"
+                     ${self ? "disabled" : ""}
+                     aria-label="Nome do usuário">
+              <div class="muted">${esc(user.email || "")}</div>
+            </div>
+            <div>
+              <select data-user-role="${esc(user.user_id)}" ${self ? "disabled" : ""}>
+                <option value="auditor" ${user.perfil === "auditor" ? "selected" : ""}>Auditor</option>
+                <option value="admin" ${user.perfil === "admin" ? "selected" : ""}>Administrador</option>
+              </select>
+            </div>
+            <div class="muted">${self ? "Você" : (user.criado_em ? new Date(user.criado_em).toLocaleDateString("pt-BR") : "—")}</div>
+            <div class="admin-user-actions">
+              ${self
+                ? '<span class="muted">Sua conta</span>'
+                : `<button class="save" type="button" data-save-user="${esc(user.user_id)}">Salvar</button>
+                   <button class="delete" type="button" data-delete-user="${esc(user.user_id)}" data-delete-name="${esc(user.nome || user.email || "este usuário")}">Excluir</button>`
+              }
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      box.querySelectorAll("[data-save-user]").forEach(btn => {
+        btn.addEventListener("click", () => saveManagedUser(btn.dataset.saveUser));
+      });
+
+      box.querySelectorAll("[data-delete-user]").forEach(btn => {
+        btn.addEventListener("click", () => deleteManagedUser(btn.dataset.deleteUser, btn.dataset.deleteName));
+      });
+    }
+
+    async function saveManagedUser(userId) {
+      if (currentRole !== "admin" || !userId) return;
+
+      const roleSelect = document.querySelector(`[data-user-role="${CSS.escape(userId)}"]`);
+      const nameInput = document.querySelector(`[data-user-name="${CSS.escape(userId)}"]`);
+      const nome = (nameInput?.value || "").trim();
+      const perfil = roleSelect?.value;
+
+      if (nome.length < 2) {
+        alert("Informe um nome válido.");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          nome,
+          perfil,
+          atualizado_em: new Date().toISOString()
+        })
+        .eq("user_id", userId);
+
+      if (error) {
+        alert("Não foi possível atualizar o usuário: " + error.message);
+        return;
+      }
+
+      alert("Usuário atualizado com sucesso.");
+      await loadAdminUsers();
+    }
+
+    async function deleteManagedUser(userId, userName) {
+      if (currentRole !== "admin" || !userId) return;
+
+      if (userId === currentUser?.id) {
+        alert("Por segurança, o administrador não pode excluir a própria conta.");
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Excluir o usuário ${userName || "selecionado"}?\n\n` +
+        "Essa ação removerá o acesso do usuário à plataforma e não pode ser desfeita."
+      );
+
+      if (!confirmed) return;
+
+      try {
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+
+        const accessToken = sessionData?.session?.access_token;
+        if (!accessToken) throw new Error("Sessão de administrador não encontrada.");
+
+        const response = await fetch(
+          `${SUPABASE_URL}/functions/v1/delete-admin-user`,
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${accessToken}`,
+              "apikey": SUPABASE_PUBLISHABLE_KEY,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ user_id: userId })
+          }
+        );
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data?.success) {
+          throw new Error(data?.error || data?.message || `A função retornou HTTP ${response.status}.`);
+        }
+
+        alert("Usuário excluído com sucesso.");
+        await loadAdminUsers();
+      } catch (error) {
+        alert("Não foi possível excluir o usuário: " + (error.message || "erro inesperado."));
+      }
+    }
+
+    async function createManagedUser() {
+      if (currentRole !== "admin") return;
+
+      const nome = $("newUserName").value.trim();
+      const email = $("newUserEmail").value.trim().toLowerCase();
+      const perfil = $("newUserRole").value;
+      const senha = $("newUserPassword").value;
+      const senha2 = $("newUserPassword2").value;
+      const btn = $("createUserBtn");
+
+      showMsg("createUserMessage", "");
+
+      if (nome.length < 2) {
+        showMsg("createUserMessage", "Informe um nome válido.", "error");
+        return;
+      }
+      if (!email) {
+        showMsg("createUserMessage", "Informe um e-mail válido.", "error");
+        return;
+      }
+      if (senha.length < 8) {
+        showMsg("createUserMessage", "A senha inicial precisa ter pelo menos 8 caracteres.", "error");
+        return;
+      }
+      if (senha !== senha2) {
+        showMsg("createUserMessage", "As senhas não conferem.", "error");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Criando...";
+
+      try {
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+
+        const accessToken = sessionData?.session?.access_token;
+        if (!accessToken) throw new Error("Sessão de administrador não encontrada.");
+
+        const response = await fetch(
+          `${SUPABASE_URL}/functions/v1/create-admin-user`,
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${accessToken}`,
+              "apikey": SUPABASE_PUBLISHABLE_KEY,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ nome, email, perfil, senha })
+          }
+        );
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data?.success) {
+          throw new Error(data?.error || data?.message || `A função retornou HTTP ${response.status}.`);
+        }
+
+        $("newUserName").value = "";
+        $("newUserEmail").value = "";
+        $("newUserPassword").value = "";
+        $("newUserPassword2").value = "";
+        $("newUserRole").value = "auditor";
+
+        showMsg("createUserMessage", "Usuário criado com sucesso.", "success");
+        await loadAdminUsers();
+      } catch (error) {
+        showMsg("createUserMessage", "Não foi possível criar o usuário: " + (error.message || "erro inesperado."), "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Criar usuário";
+      }
+    }
+
+    $("accountBtn")?.addEventListener("click", openAccount);
+    $("closeAccountBtn")?.addEventListener("click", closeAccount);
+    $("saveNameBtn")?.addEventListener("click", saveOwnName);
+    $("changePasswordBtn")?.addEventListener("click", changeOwnPassword);
+    $("createUserBtn")?.addEventListener("click", createManagedUser);
+
+    $("accountModal")?.addEventListener("click", (event) => {
+      if (event.target === $("accountModal")) closeAccount();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeAccount();
+    });
+  </script>
+
 </body>
 </html>
