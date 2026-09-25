@@ -112,10 +112,6 @@ async function createInternalUser(event){
   finally{btn.disabled=false;btn.textContent='Criar usuário';}
 }
 
-$('accountBtn')?.addEventListener('click',openAccountPanel);
-$('adminBtn')?.addEventListener('click',openAdminPanel);
-$('closeAccountBtn')?.addEventListener('click',closeAccountPanel);
-$('closeAdminBtn')?.addEventListener('click',closeAdminPanel);
 $('saveNameBtn')?.addEventListener('click',saveOwnName);
 $('changePasswordForm')?.addEventListener('submit',changeOwnPassword);
 $('createUserForm')?.addEventListener('submit',createInternalUser);
@@ -254,9 +250,30 @@ button,.file{border:0;border-radius:10px;padding:12px 16px;font-weight:700;curso
 .reports-modal{position:fixed;inset:0;background:rgba(10,35,58,.48);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999}.reports-modal.open{display:flex}.reports-box{width:min(920px,100%);max-height:min(82vh,760px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(15,45,70,.24);padding:24px}.reports-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;border-bottom:1px solid #e4ebf0;padding-bottom:16px;margin-bottom:16px}.reports-head h2{margin:0;color:var(--navy);font-size:22px}.reports-head p{margin:6px 0 0;color:var(--muted);font-size:13px}.close-reports{border:0;background:#f1f5f8;color:var(--navy);width:36px;height:36px;border-radius:50%;font-size:22px;cursor:pointer}.reports-toolbar{display:flex;justify-content:flex-end;margin-bottom:14px}.report-list{display:grid;gap:10px}.report-list-empty{padding:30px;text-align:center;color:var(--muted);border:1px dashed #cbd9e2;border-radius:14px}.report-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px;border:1px solid #dfe8ee;border-radius:14px;background:#fbfdfe}.report-row:hover{border-color:#b8d1e1;background:#f8fbfd}.report-row-main{min-width:0}.report-row-title{font-weight:800;color:var(--navy);font-size:15px}.report-row-meta{margin-top:5px;color:var(--muted);font-size:12px;line-height:1.5}.report-row-status{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}.report-row-status.open{background:#fff7d6;color:#765900}.report-row-status.finalized{background:#eef6ff;color:var(--navy)}.report-row button{flex:0 0 auto}.reports-loading{text-align:center;padding:28px;color:var(--muted)}
 
 .modal-backdrop{position:fixed;inset:0;background:rgba(10,35,58,.48);display:flex;align-items:center;justify-content:center;padding:20px;z-index:10000;backdrop-filter:blur(3px)}.modal-card{position:relative;width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.22);padding:30px}.modal-close{position:absolute;right:16px;top:12px;border:0;background:transparent;font-size:30px;line-height:1;cursor:pointer;color:#5b6573}.modal-kicker{font-size:12px;font-weight:800;letter-spacing:.12em;color:#005b8f;margin-bottom:6px}.modal-card h2{margin:0 0 20px;color:var(--navy)}.modal-card h3{margin:0 0 8px;color:var(--navy)}.account-info{display:grid;gap:10px;margin-bottom:20px}.account-info div{background:#f5f8fc;border:1px solid #e3eaf3;border-radius:12px;padding:11px 14px}.account-info span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#738096;margin-bottom:3px}.account-info strong{color:#1c2d43}.modal-card hr{border:0;border-top:1px solid #e6ebf2;margin:22px 0}.modal-card label{display:block;font-weight:700;color:#27384d;margin:13px 0}.modal-card input,.modal-card select{display:block;width:100%;box-sizing:border-box;margin-top:7px;padding:12px 13px;border:1px solid #cfd8e5;border-radius:10px;font:inherit;outline:none}.password-hint{font-size:12px;color:#738096;margin:6px 0 16px}.form-message{margin-top:12px;min-height:20px;font-size:14px;font-weight:700}.form-message.success{color:#167447}.form-message.error{color:#b42318}.admin-modal-card{width:min(1000px,100%)}.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.admin-grid .full{grid-column:1/-1}.admin-user-list{display:grid;gap:9px;margin-top:15px}.admin-user-row{display:grid;grid-template-columns:1.4fr 1.1fr .9fr 1.2fr;gap:10px;align-items:center;border:1px solid #dce6ec;border-radius:12px;padding:12px 14px;background:#f9fbfc}.admin-user-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.admin-role-select{padding:7px 9px!important;margin-top:0!important;font-size:12px!important}.danger-btn{border:1px solid #d33b3b;background:#fff;color:#b42318;border-radius:8px;padding:7px 11px;font-weight:700;cursor:pointer}.danger-btn:hover{background:#fff1f1}.admin-section{margin-top:20px}.admin-section h3{margin:0 0 8px;color:var(--navy)}.admin-note{font-size:12px;color:#687984}.admin-success{color:#167447;background:#e8f7ee;border-radius:9px;padding:10px;margin-top:10px;font-weight:700}.admin-error{color:#842029;background:#f8d7da;border-radius:9px;padding:10px;margin-top:10px;font-weight:700}.report-row-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.reports-box{max-height:min(86vh,820px)}@media(max-width:760px){.admin-grid{grid-template-columns:1fr}.admin-grid .full{grid-column:auto}.admin-user-row{grid-template-columns:1fr}.modal-card{padding:22px 16px}.modal-backdrop{padding:10px}}
+
+.central-home-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  text-decoration:none;
+  white-space:nowrap;
+}
+.report-auditor{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  margin-top:7px;
+  padding:5px 9px;
+  border-radius:999px;
+  background:#eef5fa;
+  color:var(--navy);
+  font-size:11px;
+  font-weight:800;
+}
+
 </style></head><body>
 <div class="app"><div class="toolbar"><strong style="color:var(--navy);font-size:18px">Painel de Auditoria de Perdas</strong><span class="status" id="status">Preencha os dados e importe as duas bases Procfit.</span><div class="nav">
-<button class="secondary active" data-page="p1">1. Entrada</button><button class="secondary" data-page="p2">2. Painel</button><button class="secondary" data-page="p3">3. Análise</button><button class="primary" id="export">Exportar JPEG</button><button class="secondary" id="exportCurrentXlsx">📊 Divergências Atual — Excel/LibreOffice</button><button class="secondary" id="exportPdf">📄 Exportar painel em PDF</button><button class="secondary" id="share">📱 Compartilhar JPEG</button><button class="secondary" id="emailBtn">📧 Enviar por e-mail</button><button class="secondary" id="openReports">📂 Meus relatórios</button><button class="secondary" id="accountBtn">👤 Minha conta</button><button class="secondary" id="adminBtn" style="display:none">👑 Administração</button><button class="secondary" id="saveReport">💾 Salvar relatório</button><button class="primary" id="finalizeReport">🔒 Finalizar relatório</button><button class="secondary" id="reset">Limpar</button><span class="report-lock-status" id="reportLockStatus">🟡 Em andamento</span></div></div>
+<button class="secondary active" data-page="p1">1. Entrada</button><button class="secondary" data-page="p2">2. Painel</button><button class="secondary" data-page="p3">3. Análise</button><button class="primary" id="export">Exportar JPEG</button><button class="secondary" id="exportCurrentXlsx">📊 Divergências Atual — Excel/LibreOffice</button><button class="secondary" id="exportPdf">📄 Exportar painel em PDF</button><button class="secondary" id="share">📱 Compartilhar JPEG</button><button class="secondary" id="emailBtn">📧 Enviar por e-mail</button><button class="secondary" id="openReports">📂 Meus relatórios</button><a class="secondary central-home-btn" href="../../central/" title="Voltar à página inicial da Central">🏠 Voltar à Central</a><button class="secondary" id="saveReport">💾 Salvar relatório</button><button class="primary" id="finalizeReport">🔒 Finalizar relatório</button><button class="secondary" id="reset">Limpar</button><span class="report-lock-status" id="reportLockStatus">🟡 Em andamento</span></div></div>
 <section class="page active" id="p1">
   <div id="readonlyNotice" class="readonly-note" style="display:none">🔒 Este relatório foi finalizado e está somente para consulta. Os dados registrados não podem mais ser alterados.</div>
   <div class="entry-hero">
@@ -338,7 +355,7 @@ button,.file{border:0;border-radius:10px;padding:12px 16px;font-weight:700;curso
   </div>
 </section><section class="page" id="p2"><div id="report" class="report"></div></section><section class="page" id="p3"><div class="page-wrap"><div id="analysisLossCard" class="analysis-loss-summary"></div><h2>Análise das divergências</h2><div class="sub">Itens com valor no ciclo atual acima de R$ 50,00, classificados pela comparação com o ciclo anterior.</div><div id="analysis"></div></div></section>
 </div>
-<div id="reportsModal" class="reports-modal" aria-hidden="true"><div class="reports-box" role="dialog" aria-modal="true" aria-labelledby="reportsTitle"><div class="reports-head"><div><h2 id="reportsTitle">Meus relatórios</h2><p id="reportsSubtitle">Relatórios criados pelo seu usuário. Relatórios finalizados ficam somente para consulta.</p></div><button type="button" class="close-reports" id="closeReports">×</button></div><div class="reports-toolbar"><button type="button" class="secondary" id="refreshReports">↻ Atualizar</button></div><div id="reportList" class="report-list"></div></div></div><div id="accountPanel" class="modal-backdrop" style="display:none;">
+<div id="reportsModal" class="reports-modal" aria-hidden="true"><div class="reports-box" role="dialog" aria-modal="true" aria-labelledby="reportsTitle"><div class="reports-head"><div><h2 id="reportsTitle">Meus relatórios</h2><p id="reportsSubtitle">Relatórios criados pelo seu usuário. O auditor registrado no relatório é exibido em cada item. Relatórios finalizados ficam somente para consulta.</p></div><button type="button" class="close-reports" id="closeReports">×</button></div><div class="reports-toolbar"><button type="button" class="secondary" id="refreshReports">↻ Atualizar</button></div><div id="reportList" class="report-list"></div></div></div><div id="accountPanel" class="modal-backdrop" style="display:none;">
   <div class="modal-card">
     <button class="modal-close" id="closeAccountBtn" aria-label="Fechar">×</button>
     <div class="modal-kicker">MINHA CONTA</div>
@@ -626,7 +643,7 @@ async function loadMyReports(){
   try{
     const {data,error}=await supabaseClient
       .from('relatorios_perdas')
-      .select('id,created_by,created_at,updated_at,finalized_at,status,filial,gestor,matricula_gestor,ciclo_atual,ciclo_anterior')
+      .select('id,created_by,created_at,updated_at,finalized_at,status,filial,gestor,matricula_gestor,ciclo_atual,ciclo_anterior,snapshot')
       .order('created_at',{ascending:false});
     if(error) throw error;
     if(!data?.length){
@@ -639,11 +656,13 @@ async function loadMyReports(){
       const title=`Filial ${esc(r.filial||'—')}`;
       const cycle=r.ciclo_atual?`Ciclo ${esc(r.ciclo_atual)}`:'Ciclo não informado';
       const gestor=r.gestor?`Gestor: ${esc(r.gestor)}`:'';
+      const auditorName=r?.snapshot?.entrada?.auditor || 'Auditor não informado';
       const mode=finalized?'🔒 Finalizado':otherAuditor?'👁️ Consulta administrativa':'🟡 Em andamento';
       return `<div class="report-row">
         <div class="report-row-main">
           <div class="report-row-title">${title}</div>
           <div class="report-row-meta">${cycle}${gestor?' • '+gestor:''}<br>Criado em ${formatDateTime(r.created_at)}${finalized?' • Finalizado em '+formatDateTime(r.finalized_at):' • Atualizado em '+formatDateTime(r.updated_at)}</div>
+          <div class="report-auditor">🕵️ Auditor: ${esc(auditorName)}</div>
           <span class="report-row-status ${finalized?'finalized':'open'}">${mode}</span>
         </div>
         <div class="report-row-actions"><button type="button" class="primary" data-open-report="${esc(r.id)}">Abrir</button>${isAdmin?`<button type="button" class="danger-btn" data-delete-report="${esc(r.id)}" data-delete-label="${esc(title+' — '+cycle)}">Excluir</button>`:''}</div>
