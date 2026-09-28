@@ -801,14 +801,23 @@ async function syncFilialCadastro(reportId, snapshot){
     ultima_atualizacao:new Date().toISOString()
   };
 
-  const result=await supabaseClient
-    .from('filiais')
-    .upsert(payload,{onConflict:'numero'})
-    .select('id,numero,nome,ultimo_relatorio_id')
-    .single();
+  try{
+    const result=await supabaseClient
+      .from('filiais')
+      .upsert(payload,{onConflict:'numero'})
+      .select('id,numero,nome,ultimo_relatorio_id')
+      .single();
 
-  if(result.error) throw result.error;
-  return result.data;
+    if(result.error){
+      console.warn('Não foi possível sincronizar o cadastro da filial. O relatório continuará sendo salvo.',result.error);
+      return null;
+    }
+
+    return result.data;
+  }catch(error){
+    console.warn('Falha na sincronização da filial. O relatório continuará sendo salvo.',error);
+    return null;
+  }
 }
 
 async function saveReport(){
@@ -858,10 +867,10 @@ async function saveReport(){
     reportId=result.data.id;
 
     // O preenchimento do relatório cria/atualiza automaticamente o cadastro da filial.
-    await syncFilialCadastro(reportId,snapshot);
+    syncFilialCadastro(reportId,snapshot);
 
     reportStatus=result.data.status;
-    $('status').textContent='Relatório salvo com sucesso. Cadastro da filial atualizado.';
+    $('status').textContent='Relatório salvo com sucesso.';
     applyReportMode();
     return true;
   }catch(error){
@@ -919,7 +928,7 @@ async function finalizeReport(){
 
     // Mesmo no fluxo de finalização, a filial é criada/atualizada
     // automaticamente a partir dos dados do relatório.
-    await syncFilialCadastro(reportId,snapshot);
+    syncFilialCadastro(reportId,snapshot);
 
     reportStatus='em_andamento';
 
