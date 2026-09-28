@@ -24,7 +24,7 @@
     </div>
     <div class="flex items-center gap-3">
       <span id="userProfile" class="text-sm font-semibold text-slate-600"></span>
-      <button id="logoutBtn" class="btn border border-slate-200 text-slate-700 bg-white">Sair</button>
+      <button id="logoutBtn" class="btn border border-slate-200 text-slate-700 bg-white">← Voltar à Central</button>
     </div>
   </div>
 </header>
@@ -328,7 +328,9 @@ $('numeroFilial').addEventListener('keydown',e=>{if(e.key==='Enter') buscarFilia
 $('excluirBtn').addEventListener('click',abrirModalExclusao);
 $('cancelarExclusao').addEventListener('click',fecharModal);
 $('confirmarExclusao').addEventListener('click',excluirFilial);
-$('logoutBtn').addEventListener('click',async()=>{await supabaseClient.auth.signOut();window.location.href='../../central/';});
+$('logoutBtn').addEventListener('click',()=>{
+  window.location.href='../../central/';
+});
 
 (async()=>{
   try{
