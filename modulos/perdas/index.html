@@ -834,7 +834,8 @@ async function finalizeReport(){
     nav('p2');
     return;
   }
-  const confirmed=window.confirm('Finalizar este relatório? Depois de finalizado, os dados das abas Entrada, Painel e Análise não poderão mais ser alterados.');
+
+  const confirmed=window.confirm('Finalizar este relatório? Antes da finalização, você deverá preencher o encerramento obrigatório.');
   if(!confirmed) return;
 
   const user=await ensureAuthenticated();
@@ -842,39 +843,119 @@ async function finalizeReport(){
 
   const snapshot=getReportSnapshot();
   const meta=reportListData(snapshot);
+
   $('finalizeReport').disabled=true;
   $('saveReport').disabled=true;
-  $('status').textContent='Finalizando relatório…';
+  $('status').textContent='Salvando relatório antes do encerramento…';
 
   try{
+    // Primeiro persistimos o relatório como "em_andamento".
+    // O status só passa a "finalizado" depois do encerramento.
     let result;
     if(reportId){
       result=await supabaseClient
         .from('relatorios_perdas')
-        .update({...meta,snapshot,status:'finalizado',finalized_at:new Date().toISOString()})
+        .update({...meta,snapshot,status:'em_andamento'})
         .eq('id',reportId)
-        .select('id,status,finalized_at')
+        .select('id,status,updated_at')
         .single();
     }else{
       result=await supabaseClient
         .from('relatorios_perdas')
-        .insert({created_by:user.id,...meta,snapshot,status:'finalizado',finalized_at:new Date().toISOString()})
-        .select('id,status,finalized_at')
+        .insert({created_by:user.id,...meta,snapshot,status:'em_andamento'})
+        .select('id,status,created_at,updated_at')
         .single();
     }
 
     if(result.error) throw result.error;
+
     reportId=result.data.id;
-    finalizedSnapshot=snapshot;
-    reportStatus='finalizado';
-    applyReportMode();
-    $('status').textContent='Relatório finalizado e bloqueado para alterações.';
-    nav('p2');
+    reportStatus='em_andamento';
+
+    const ctx={
+      report_id:reportId,
+      filial:currentReport.filial || $('filial')?.value || '',
+      filial_numero:currentReport.filial || '',
+      ciclo:currentReport.cicloAtual || $('cicloAtual')?.value || '',
+      auditor:currentReport.auditor || $('auditor')?.value || '',
+      auditor_matricula:currentReport.matriculaAuditor || '',
+      return_url:window.location.href.split('?')[0].split('#')[0],
+      iniciado_em:new Date().toISOString()
+    };
+
+    localStorage.setItem('relatorioPerdasEncerramentoPendente',JSON.stringify(ctx));
+
+    const returnUrl=encodeURIComponent(ctx.return_url);
+    window.location.href='encerramento-relatorio.html?return='+returnUrl;
   }catch(error){
     console.error(error);
-    $('status').textContent='Erro ao finalizar o relatório: '+(error.message||'verifique sua conexão e permissões.');
+    $('status').textContent='Erro ao preparar o encerramento: '+(error.message||'verifique sua conexão e permissões.');
     $('finalizeReport').disabled=false;
     $('saveReport').disabled=false;
+  }
+}
+
+async function finalizeReportAfterClosing(encerramento){
+  if(!encerramento || !encerramento.report_id){
+    throw new Error('Encerramento sem identificação do relatório.');
+  }
+
+  $('status').textContent='Salvando encerramento e finalizando relatório…';
+
+  try{
+    const loaded=await supabaseClient
+      .from('relatorios_perdas')
+      .select('id,status,snapshot')
+      .eq('id',encerramento.report_id)
+      .single();
+
+    if(loaded.error) throw loaded.error;
+    if(!loaded.data?.snapshot) throw new Error('O relatório não possui snapshot válido.');
+
+    const finalSnapshot={
+      ...loaded.data.snapshot,
+      encerramento:{
+        intercorrencia:encerramento.intercorrencia,
+        intercorrencia_descricao:encerramento.intercorrencia_descricao || '',
+        checklist_facil:encerramento.checklist_facil,
+        checklist_facil_descricao:encerramento.checklist_facil_descricao || '',
+        encerramento_registrado_em:encerramento.encerramento_registrado_em || new Date().toISOString()
+      }
+    };
+
+    const now=new Date().toISOString();
+
+    const result=await supabaseClient
+      .from('relatorios_perdas')
+      .update({
+        snapshot:finalSnapshot,
+        status:'finalizado',
+        finalized_at:now
+      })
+      .eq('id',encerramento.report_id)
+      .select('id,status,finalized_at,snapshot')
+      .single();
+
+    if(result.error) throw result.error;
+
+    reportId=result.data.id;
+    reportStatus='finalizado';
+    finalizedSnapshot=finalSnapshot;
+
+    localStorage.removeItem('relatorioPerdasEncerramentoPendente');
+    localStorage.removeItem('encerramentoRelatorioPendente');
+    localStorage.removeItem('encerramentoRelatorioPendenteFinal');
+
+    $('status').textContent='Relatório finalizado e encerramento salvo com sucesso.';
+    applyReportMode();
+    nav('p2');
+    return true;
+  }catch(error){
+    console.error(error);
+    $('status').textContent='Erro ao salvar o encerramento/finalizar: '+(error.message||'verifique sua conexão e permissões.');
+    $('finalizeReport').disabled=false;
+    $('saveReport').disabled=false;
+    return false;
   }
 }
 
@@ -1189,4 +1270,202 @@ $('saveReport').addEventListener('click',saveReport);$('finalizeReport').addEven
 $('export').addEventListener('click',exportJpeg);$('share').addEventListener('click',shareJpeg);$('exportCurrentXlsx').addEventListener('click',exportCurrentDivergenciasXlsx);$('exportPdf').addEventListener('click',exportPainelPdf);$('emailBtn').addEventListener('click',openEmailModal);$('closeEmail').addEventListener('click',closeEmailModal);$('cancelEmail').addEventListener('click',closeEmailModal);$('sendEmail').addEventListener('click',()=>{ sendEmailReport(); });$('emailModal').addEventListener('click',e=>{if(e.target.id==='emailModal')closeEmailModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeEmailModal()});
 $('reset').addEventListener('click',()=>{closeReportsModal();baseAtual=[];baseAnterior=[];['filial','gestor','auditor','cicloAtual','cicloAnt','fatAtual','indAtual','fatAnt','indAnt','resAntInput'].forEach(id=>$(id).value='');$('meta').value='0,60%';$('baseAtualStatus').textContent='';$('baseAntStatus').textContent='';$('baseAtualPaste').value='';$('baseAntPaste').value='';nav('p1');$('status').textContent='Preencha os dados e importe as duas bases Procfit.';render({filial:'—',gestor:'—',matriculaGestor:'',auditor:'—',cicloAtual:'—',cicloAnt:'—',fatAtual:0,fatAnt:0,indAtual:0,indAnt:0,resAtual:0,perdaLiquidaAtual:0,resAnt:0,meta:.006,falta:0,sobra:0,geral:0,setores:[],faltas:[],sobras:[]});renderAnalysis();reportStatus='em_andamento';finalizedSnapshot=null;reportId=null;currentUser=null;currentRole=null;reportReadOnlyOverride=false;applyReportMode()});
 render({filial:'—',gestor:'—',matriculaGestor:'',auditor:'—',cicloAtual:'—',cicloAnt:'—',fatAtual:0,fatAnt:0,indAtual:0,indAnt:0,resAtual:0,resAnt:0,meta:.006,falta:0,sobra:0,geral:0,setores:[],faltas:[],sobras:[]});renderAnalysis();applyReportMode();
-</script></body></html>
+</script>
+<style id="encerramento-style">
+  .enc-overlay{position:fixed;inset:0;background:rgba(15,23,42,.62);display:none;align-items:center;justify-content:center;z-index:9999;padding:24px}
+  .enc-overlay.open{display:flex}
+  .enc-card{width:min(760px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.28);padding:28px}
+  .enc-title{margin:0 0 6px;font-size:24px;font-weight:800}
+  .enc-subtitle{margin:0 0 22px;color:#64748b}
+  .enc-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:22px}
+  .enc-meta div{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px}
+  .enc-meta small{display:block;color:#64748b;margin-bottom:4px}
+  .enc-label{display:block;font-weight:700;margin:18px 0 8px}
+  .enc-options{display:flex;gap:12px;flex-wrap:wrap}
+  .enc-option{display:flex;align-items:center;gap:8px;border:1px solid #cbd5e1;border-radius:10px;padding:10px 14px;cursor:pointer}
+  .enc-option:has(input:checked){border-color:#2563eb;background:#eff6ff}
+  .enc-textarea{width:100%;min-height:120px;resize:vertical;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:10px;padding:12px;font:inherit}
+  .enc-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
+  .enc-btn{border:0;border-radius:10px;padding:11px 18px;font-weight:700;cursor:pointer}
+  .enc-btn-secondary{background:#e2e8f0;color:#0f172a}
+  .enc-btn-primary{background:#2563eb;color:#fff}
+  .enc-error{display:none;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;margin-top:14px}
+  .enc-error.show{display:block}
+  .enc-conditional{display:none;margin-top:12px}
+  .enc-conditional.show{display:block}
+  @media(max-width:600px){.enc-card{padding:20px}.enc-meta{grid-template-columns:1fr}}
+</style>
+
+<div id="encerramentoOverlay" class="enc-overlay" aria-hidden="true">
+  <section class="enc-card" role="dialog" aria-modal="true" aria-labelledby="encTitle">
+    <h2 id="encTitle" class="enc-title">Encerramento do Relatório</h2>
+    <p class="enc-subtitle">Antes de finalizar, registre as ocorrências identificadas durante o processo.</p>
+
+    <div class="enc-meta">
+      <div><small>Filial</small><strong id="encFilial">—</strong></div>
+      <div><small>Ciclo</small><strong id="encCiclo">—</strong></div>
+      <div><small>Auditor</small><strong id="encAuditor">—</strong></div>
+      <div><small>Data</small><strong id="encData">—</strong></div>
+    </div>
+
+    <label class="enc-label">Houve alguma intercorrência?</label>
+    <div class="enc-options">
+      <label class="enc-option"><input type="radio" name="encIntercorrencia" value="nao"> Não</label>
+      <label class="enc-option"><input type="radio" name="encIntercorrencia" value="sim"> Sim</label>
+    </div>
+    <div id="encIntercorrenciaBox" class="enc-conditional">
+      <label class="enc-label" for="encIntercorrenciaTexto">Descreva a intercorrência</label>
+      <textarea id="encIntercorrenciaTexto" class="enc-textarea"></textarea>
+    </div>
+
+    <label class="enc-label">Houve alguma notificação no Checklist Fácil?</label>
+    <div class="enc-options">
+      <label class="enc-option"><input type="radio" name="encChecklist" value="nao"> Não</label>
+      <label class="enc-option"><input type="radio" name="encChecklist" value="sim"> Sim</label>
+    </div>
+    <div id="encChecklistBox" class="enc-conditional">
+      <label class="enc-label" for="encChecklistTexto">Descreva a notificação</label>
+      <textarea id="encChecklistTexto" class="enc-textarea"></textarea>
+    </div>
+
+    <div id="encError" class="enc-error"></div>
+
+    <div class="enc-actions">
+      <button type="button" class="enc-btn enc-btn-secondary" id="encCancelar">Voltar</button>
+      <button type="button" class="enc-btn enc-btn-primary" id="encSalvar">Salvar e Finalizar</button>
+    </div>
+  </section>
+</div>
+
+<script id="encerramento-script">
+(function(){
+  const overlay = document.getElementById('encerramentoOverlay');
+  const errorBox = document.getElementById('encError');
+
+  function setConditional(name, boxId){
+    document.querySelectorAll('input[name="'+name+'"]').forEach(r => {
+      r.addEventListener('change', () => {
+        const box = document.getElementById(boxId);
+        box.classList.toggle('show', r.checked && r.value === 'sim');
+      });
+    });
+  }
+
+  setConditional('encIntercorrencia','encIntercorrenciaBox');
+  setConditional('encChecklist','encChecklistBox');
+
+  function getRadio(name){
+    const el = document.querySelector('input[name="'+name+'"]:checked');
+    return el ? el.value : null;
+  }
+
+  function reportContext(){
+    let ctx = null;
+    try { ctx = JSON.parse(localStorage.getItem('relatorioPerdasEncerramentoPendente') || 'null'); } catch(e){}
+    return ctx || {};
+  }
+
+  function openPage(){
+    const ctx = reportContext();
+    document.getElementById('encFilial').textContent = ctx.filial || '—';
+    document.getElementById('encCiclo').textContent = ctx.ciclo || '—';
+    document.getElementById('encAuditor').textContent = ctx.auditor || '—';
+    document.getElementById('encData').textContent = new Date().toLocaleString('pt-BR');
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden','false');
+  }
+
+  document.getElementById('encCancelar').addEventListener('click', () => {
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden','true');
+  });
+
+  document.getElementById('encSalvar').addEventListener('click', () => {
+    errorBox.classList.remove('show');
+
+    const interc = getRadio('encIntercorrencia');
+    const checklist = getRadio('encChecklist');
+
+    if (!interc || !checklist){
+      errorBox.textContent = 'Responda as duas perguntas antes de finalizar o relatório.';
+      errorBox.classList.add('show');
+      return;
+    }
+
+    if (interc === 'sim' && !document.getElementById('encIntercorrenciaTexto').value.trim()){
+      errorBox.textContent = 'Descreva a intercorrência registrada.';
+      errorBox.classList.add('show');
+      return;
+    }
+
+    if (checklist === 'sim' && !document.getElementById('encChecklistTexto').value.trim()){
+      errorBox.textContent = 'Descreva a notificação do Checklist Fácil.';
+      errorBox.classList.add('show');
+      return;
+    }
+
+    const encerramento = {
+      ...reportContext(),
+      intercorrencia: interc,
+      intercorrencia_descricao: document.getElementById('encIntercorrenciaTexto').value.trim(),
+      checklist_facil: checklist,
+      checklist_facil_descricao: document.getElementById('encChecklistTexto').value.trim(),
+      encerramento_registrado_em: new Date().toISOString()
+    };
+
+    localStorage.setItem('encerramentoRelatorioPendente', JSON.stringify(encerramento));
+
+    // A gravação definitiva no Supabase e a mudança de status devem
+    // ser conectadas à função de finalização existente após validação
+    // da estrutura atual do banco.
+    window.dispatchEvent(new CustomEvent('encerramentoRelatorioSalvo', {detail: encerramento}));
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden','true');
+
+    if (typeof window.finalizeReportAfterClosing === 'function') {
+      window.finalizeReportAfterClosing(encerramento);
+    } else {
+      alert('Encerramento preenchido. A integração final com o salvamento do relatório será conectada à função de finalização existente.');
+    }
+  });
+
+  window.abrirPaginaEncerramento = openPage;
+})();
+</script>
+
+
+<script id="encerramento-return-handler">
+(function(){
+  async function processReturn(){
+    try{
+      const params=new URLSearchParams(window.location.search);
+      if(params.get("encerramento_concluido")!=="1") return;
+
+      const pending=JSON.parse(localStorage.getItem("relatorioPerdasEncerramentoPendente")||"null");
+      const encerramento=JSON.parse(localStorage.getItem("encerramentoRelatorioPendenteFinal")||"null");
+      const reportId=pending?.report_id || encerramento?.report_id;
+
+      if(!reportId || !encerramento){
+        $('status').textContent='Não foi possível recuperar os dados do encerramento.';
+        return;
+      }
+
+      window.history.replaceState({},document.title,window.location.pathname);
+
+      await openSavedReport(reportId);
+      await finalizeReportAfterClosing(encerramento);
+    }catch(error){
+      console.error("Erro ao concluir encerramento:",error);
+      $('status').textContent='Erro ao concluir o encerramento: '+(error.message||error);
+    }
+  }
+
+  if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",()=>setTimeout(processReturn,400));
+  }else{
+    setTimeout(processReturn,400);
+  }
+})();
+</script>
+
+</body></html>
