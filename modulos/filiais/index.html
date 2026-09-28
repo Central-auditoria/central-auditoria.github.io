@@ -1,3 +1,346 @@
 <!DOCTYPE html>
-<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Filiais | Central de Auditoria</title></head>
-<body><h1>Filiais</h1><p>Estrutura preparada para o futuro módulo de filiais.</p><p><a href="../../">← Voltar para a Central</a></p></body></html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Filiais — Central de Auditoria Nissei</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f7fa}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,.05)}
+  .btn{border-radius:10px;padding:.65rem 1rem;font-weight:700;transition:.15s}
+  .btn-primary{background:#111827;color:#fff}.btn-primary:hover{background:#1f2937}
+  .btn-danger{background:#fee2e2;color:#b91c1c}.btn-danger:hover{background:#fecaca}
+  .muted{color:#64748b}
+  .pill{display:inline-flex;align-items:center;border-radius:999px;padding:.25rem .65rem;font-size:.75rem;font-weight:800}
+</style>
+</head>
+<body class="min-h-screen">
+<header class="bg-white border-b border-slate-200 sticky top-0 z-20">
+  <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+    <div>
+      <div class="text-xs font-bold tracking-widest text-slate-500 uppercase">Central de Auditoria Nissei</div>
+      <h1 class="text-2xl font-black text-slate-900">Filiais</h1>
+    </div>
+    <div class="flex items-center gap-3">
+      <span id="userProfile" class="text-sm font-semibold text-slate-600"></span>
+      <button id="logoutBtn" class="btn border border-slate-200 text-slate-700 bg-white">Sair</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+  <section class="card p-5">
+    <div class="flex flex-col md:flex-row md:items-end gap-3">
+      <div class="flex-1">
+        <label for="numeroFilial" class="block text-sm font-bold text-slate-700 mb-2">Número da filial</label>
+        <input id="numeroFilial" inputmode="numeric" autocomplete="off"
+          class="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-slate-400"
+          placeholder="Ex.: 123">
+      </div>
+      <button id="buscarBtn" class="btn btn-primary">Buscar filial</button>
+    </div>
+    <p id="status" class="text-sm mt-3 muted"></p>
+  </section>
+
+  <section id="resultado" class="hidden space-y-6">
+    <div class="card p-6">
+      <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <div class="text-sm font-bold text-slate-500 uppercase tracking-wide">Filial</div>
+          <h2 id="filialTitulo" class="text-3xl font-black text-slate-900 mt-1"></h2>
+          <p id="filialNome" class="text-slate-600 mt-1"></p>
+        </div>
+        <button id="excluirBtn" class="hidden btn btn-danger">Excluir filial</button>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-4 mt-6">
+        <div class="rounded-xl bg-slate-50 p-4">
+          <div class="text-xs font-bold uppercase text-slate-500">Gestor atual</div>
+          <div id="gestorAtual" class="font-bold text-slate-900 mt-2">—</div>
+        </div>
+        <div class="rounded-xl bg-slate-50 p-4">
+          <div class="text-xs font-bold uppercase text-slate-500">Auditor do último balanço</div>
+          <div id="auditorAtual" class="font-bold text-slate-900 mt-2">—</div>
+        </div>
+        <div class="rounded-xl bg-slate-50 p-4">
+          <div class="text-xs font-bold uppercase text-slate-500">Última atualização</div>
+          <div id="ultimaAtualizacao" class="font-bold text-slate-900 mt-2">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card p-6">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div>
+          <h3 class="text-xl font-black text-slate-900">Histórico de Relatórios de Perdas</h3>
+          <p class="text-sm muted mt-1">Relatórios vinculados ao número desta filial.</p>
+        </div>
+        <span id="contadorRelatorios" class="pill bg-slate-100 text-slate-700">0</span>
+      </div>
+      <div id="historico" class="space-y-3"></div>
+    </div>
+  </section>
+</main>
+
+<div id="modal" class="hidden fixed inset-0 bg-slate-900/50 z-50 items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+    <h3 class="text-xl font-black text-slate-900">Excluir filial?</h3>
+    <p id="modalTexto" class="text-slate-600 mt-3"></p>
+    <div class="flex justify-end gap-3 mt-6">
+      <button id="cancelarExclusao" class="btn border border-slate-200 text-slate-700">Cancelar</button>
+      <button id="confirmarExclusao" class="btn btn-danger">Excluir filial</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://sckwjszqvlbqhfnyxqtl.supabase.co';
+const SUPABASE_ANON_KEY = 'COLE_AQUI_A_MESMA_ANON_KEY_DA_CENTRAL';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let currentProfile = null;
+let currentFilial = null;
+
+const $ = id => document.getElementById(id);
+
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+  }[c]));
+}
+
+function formatDate(value){
+  if(!value) return '—';
+  const d = new Date(value);
+  if(Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString('pt-BR');
+}
+
+function setStatus(text, error=false){
+  $('status').textContent = text || '';
+  $('status').className = 'text-sm mt-3 ' + (error ? 'text-red-600' : 'muted');
+}
+
+async function carregarUsuario(){
+  const {data:{session},error} = await supabaseClient.auth.getSession();
+  if(error) throw error;
+  if(!session){
+    window.location.href = '../../index.html';
+    return false;
+  }
+
+  currentUser=session.user;
+
+  const profileResult=await supabaseClient
+    .from('profiles')
+    .select('id,user_id,nome,matricula,perfil')
+    .eq('user_id',currentUser.id)
+    .single();
+
+  if(profileResult.error) throw profileResult.error;
+  currentProfile=profileResult.data;
+
+  if(!['admin','auditor'].includes(currentProfile.perfil)){
+    document.body.innerHTML='<div class="min-h-screen flex items-center justify-center p-6"><div class="card p-8 max-w-lg text-center"><h1 class="text-2xl font-black">Acesso não autorizado</h1><p class="text-slate-600 mt-3">Seu perfil não possui acesso ao módulo Filiais.</p></div></div>';
+    return false;
+  }
+
+  $('userProfile').textContent = `${currentProfile.nome || ''} · ${currentProfile.perfil}`;
+  if(currentProfile.perfil === 'admin') $('excluirBtn').classList.remove('hidden');
+  return true;
+}
+
+async function buscarFilial(){
+  const numero=$('numeroFilial').value.trim();
+  if(!numero){
+    setStatus('Informe o número da filial.',true);
+    $('resultado').classList.add('hidden');
+    return;
+  }
+
+  setStatus('Buscando...');
+  $('resultado').classList.add('hidden');
+
+  const filialResult=await supabaseClient
+    .from('filiais')
+    .select('*')
+    .eq('numero',numero)
+    .maybeSingle();
+
+  if(filialResult.error){
+    setStatus('Erro ao buscar filial: '+filialResult.error.message,true);
+    return;
+  }
+
+  if(!filialResult.data){
+    setStatus('Filial não encontrada no cadastro.',true);
+    return;
+  }
+
+  currentFilial=filialResult.data;
+  renderFilial(currentFilial);
+  await carregarHistorico(currentFilial);
+  $('resultado').classList.remove('hidden');
+  setStatus('');
+}
+
+function renderFilial(f){
+  $('filialTitulo').textContent=`Filial ${f.numero || ''}`;
+  $('filialNome').textContent=f.nome || 'Nome não informado';
+  $('gestorAtual').textContent=f.gestor_nome
+    ? `${f.gestor_nome}${f.gestor_matricula ? ' — '+f.gestor_matricula : ''}`
+    : '—';
+  $('auditorAtual').textContent=f.auditor_ultimo_balanco_nome
+    ? `${f.auditor_ultimo_balanco_nome}${f.auditor_ultimo_balanco_matricula ? ' — '+f.auditor_ultimo_balanco_matricula : ''}`
+    : '—';
+  $('ultimaAtualizacao').textContent=formatDate(f.ultima_atualizacao);
+}
+
+async function carregarHistorico(f){
+  $('historico').innerHTML='<div class="text-sm muted">Carregando histórico...</div>';
+
+  // A busca do histórico usa o número da filial armazenado no snapshot.
+  // Isso preserva o histórico mesmo quando o cadastro atual do gestor muda.
+  const result=await supabaseClient
+    .from('relatorios_perdas')
+    .select('id,status,created_at,finalized_at,snapshot')
+    .order('created_at',{ascending:false});
+
+  if(result.error){
+    $('historico').innerHTML=`<div class="text-sm text-red-600">Erro ao carregar histórico: ${escapeHtml(result.error.message)}</div>`;
+    return;
+  }
+
+  const numero=String(f.numero);
+  const relatorios=(result.data||[]).filter(r=>{
+    const snap=r.snapshot || {};
+    const entrada=snap.entrada || {};
+    const valor=entrada.filial ?? snap.filial ?? '';
+    const raw=String(valor).trim();
+    return raw === numero || raw.startsWith(numero+' —') || raw.startsWith(numero+' -') || raw.startsWith(numero+' –');
+  });
+
+  $('contadorRelatorios').textContent=relatorios.length;
+
+  if(!relatorios.length){
+    $('historico').innerHTML='<div class="rounded-xl bg-slate-50 p-5 text-sm text-slate-600">Nenhum relatório encontrado para esta filial.</div>';
+    return;
+  }
+
+  // Busca os encerramentos separadamente para manter o módulo compatível
+  // mesmo se algum relatório ainda não possuir encerramento.
+  const ids=relatorios.map(r=>r.id);
+  const encerramentos=await supabaseClient
+    .from('relatorios_perdas_encerramentos')
+    .select('id,relatorio_id,intercorrencia,intercorrencia_descricao,checklist_facil,checklist_facil_descricao,registrado_em,registrado_por')
+    .in('relatorio_id',ids);
+
+  const mapa=new Map((encerramentos.data||[]).map(e=>[e.relatorio_id,e]));
+
+  $('historico').innerHTML=relatorios.map(r=>{
+    const snap=r.snapshot||{};
+    const entrada=snap.entrada||{};
+    const auditor=entrada.auditor || snap.auditor || '—';
+    const enc=mapa.get(r.id);
+    const status=(r.status||'').toLowerCase();
+    const statusLabel=status==='finalizado'?'Finalizado':(status||'Em andamento');
+    const statusClass=status==='finalizado'?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700';
+
+    return `
+      <div class="rounded-xl border border-slate-200 p-5">
+        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+          <div>
+            <div class="font-black text-slate-900">Relatório de Perdas</div>
+            <div class="text-sm text-slate-600 mt-1">Auditor: ${escapeHtml(auditor)}</div>
+            <div class="text-sm text-slate-600">Criado: ${escapeHtml(formatDate(r.created_at))}</div>
+            ${r.finalized_at ? `<div class="text-sm text-slate-600">Finalizado: ${escapeHtml(formatDate(r.finalized_at))}</div>` : ''}
+          </div>
+          <span class="pill ${statusClass}">${escapeHtml(statusLabel)}</span>
+        </div>
+
+        ${enc ? `
+          <div class="mt-4 pt-4 border-t border-slate-100">
+            <div class="text-sm font-black text-slate-800">Encerramento</div>
+            <div class="grid md:grid-cols-2 gap-3 mt-3">
+              <div class="rounded-lg bg-slate-50 p-3">
+                <div class="text-xs font-bold uppercase text-slate-500">Intercorrência</div>
+                <div class="font-bold mt-1">${enc.intercorrencia ? 'Sim' : 'Não'}</div>
+                ${enc.intercorrencia && enc.intercorrencia_descricao ? `<div class="text-sm text-slate-600 mt-1">${escapeHtml(enc.intercorrencia_descricao)}</div>` : ''}
+              </div>
+              <div class="rounded-lg bg-slate-50 p-3">
+                <div class="text-xs font-bold uppercase text-slate-500">Checklist Fácil</div>
+                <div class="font-bold mt-1">${enc.checklist_facil ? 'Sim' : 'Não'}</div>
+                ${enc.checklist_facil && enc.checklist_facil_descricao ? `<div class="text-sm text-slate-600 mt-1">${escapeHtml(enc.checklist_facil_descricao)}</div>` : ''}
+              </div>
+            </div>
+            <div class="text-xs text-slate-500 mt-3">Encerrado em ${escapeHtml(formatDate(enc.registrado_em))}</div>
+          </div>
+        ` : `
+          <div class="mt-4 pt-4 border-t border-slate-100 text-sm text-slate-500">
+            Este relatório ainda não possui encerramento registrado.
+          </div>
+        `}
+      </div>`;
+  }).join('');
+}
+
+function abrirModalExclusao(){
+  if(!currentFilial || currentProfile?.perfil!=='admin') return;
+  $('modalTexto').textContent=`A filial ${currentFilial.numero}${currentFilial.nome ? ' — '+currentFilial.nome : ''} será removida do cadastro atual. Os Relatórios de Perdas e seus históricos NÃO serão excluídos.`;
+  $('modal').classList.remove('hidden');
+  $('modal').classList.add('flex');
+}
+
+function fecharModal(){
+  $('modal').classList.add('hidden');
+  $('modal').classList.remove('flex');
+}
+
+async function excluirFilial(){
+  if(!currentFilial || currentProfile?.perfil!=='admin') return;
+
+  $('confirmarExclusao').disabled=true;
+  $('confirmarExclusao').textContent='Excluindo...';
+
+  const result=await supabaseClient
+    .from('filiais')
+    .delete()
+    .eq('id',currentFilial.id);
+
+  $('confirmarExclusao').disabled=false;
+  $('confirmarExclusao').textContent='Excluir filial';
+
+  if(result.error){
+    fecharModal();
+    setStatus('Erro ao excluir filial: '+result.error.message,true);
+    return;
+  }
+
+  fecharModal();
+  currentFilial=null;
+  $('resultado').classList.add('hidden');
+  setStatus('Filial excluída do cadastro. Os relatórios históricos foram preservados.');
+}
+
+$('buscarBtn').addEventListener('click',buscarFilial);
+$('numeroFilial').addEventListener('keydown',e=>{if(e.key==='Enter') buscarFilial();});
+$('excluirBtn').addEventListener('click',abrirModalExclusao);
+$('cancelarExclusao').addEventListener('click',fecharModal);
+$('confirmarExclusao').addEventListener('click',excluirFilial);
+$('logoutBtn').addEventListener('click',async()=>{await supabaseClient.auth.signOut();window.location.href='../../index.html';});
+
+(async()=>{
+  try{
+    const ok=await carregarUsuario();
+    if(ok) $('numeroFilial').focus();
+  }catch(error){
+    console.error(error);
+    setStatus('Erro ao carregar o módulo: '+error.message,true);
+  }
+})();
+</script>
+</body>
+</html>
