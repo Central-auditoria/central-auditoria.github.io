@@ -521,7 +521,7 @@ function render(d){
   <div class="section-title">COMPARATIVO — CICLO ATUAL × CICLO ANTERIOR</div>
   <div class="compare"><div class="grid head"><span>INDICADOR</span><span>ANTERIOR</span><span>ATUAL</span><span>VARIAÇÃO</span></div>
     <div class="grid row"><span>Faturamento</span><span>${brl(d.fatAnt)}</span><span>${brl(d.fatAtual)}</span><span style="color:${d.fatAtual >= d.fatAnt ? 'var(--green)' : 'var(--red)'}">${d.fatAnt ? ((d.fatAtual/d.fatAnt-1)*100 >= 0 ? '+' : '') + ((d.fatAtual/d.fatAnt-1)*100).toFixed(1).replace('.',',') + '%' : '—'}</span></div>
-    <div class="grid row"><span>Indicador operacional</span><span>${pct(d.indAnt)}</span><span>${pct(d.indAtual)}</span><span style="color:${corMelhoria(vi)};font-weight:800">${pp(vi)}</span></div>
+    <div class="grid row"><span>Vencidos + Danificados</span><span>${pct(d.indAnt)}</span><span>${pct(d.indAtual)}</span><span style="color:${corMelhoria(vi)};font-weight:800">${pp(vi)}</span></div>
     <div class="grid row"><span>Resultado final</span><span>${pct(d.resAnt)}</span><span>${pct(d.resAtual)}</span><span style="color:${corMelhoria(vr)};font-weight:800">${pp(vr)}</span></div>
 </div>
   <div class="section-title">TOP 5 SETORES OFENSORES</div>
