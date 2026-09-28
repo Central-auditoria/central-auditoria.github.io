@@ -95,8 +95,9 @@
 </div>
 
 <script>
-import { supabase } from '../../js/auth.js';
-const supabaseClient = supabase;
+const SUPABASE_URL = 'https://skfpqaxbypryztznakke.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_Cdgo8O0bLb1Jd1uTuhlp1A_qTJpbbXj';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 let currentUser = null;
 let currentProfile = null;
@@ -126,8 +127,7 @@ async function carregarUsuario(){
   const {data:{session},error} = await supabaseClient.auth.getSession();
   if(error) throw error;
   if(!session){
-    window.location.href = '../../central/';
-    return false;
+    throw new Error('Sessão do Supabase não foi encontrada nesta página. Abra o módulo Filiais pela Central após fazer login.');
   }
 
   currentUser=session.user;
@@ -136,7 +136,7 @@ async function carregarUsuario(){
     .from('profiles')
     .select('id,user_id,nome,matricula,perfil')
     .eq('user_id',currentUser.id)
-    .single();
+    .maybeSingle();
 
   if(profileResult.error) throw profileResult.error;
   currentProfile=profileResult.data;
@@ -335,8 +335,9 @@ $('logoutBtn').addEventListener('click',async()=>{await supabaseClient.auth.sign
     const ok=await carregarUsuario();
     if(ok) $('numeroFilial').focus();
   }catch(error){
-    console.error(error);
-    setStatus('Erro ao carregar o módulo: '+error.message,true);
+    console.error('Erro ao iniciar Filiais:',error);
+    $('resultado').classList.add('hidden');
+    setStatus('Erro ao iniciar o módulo Filiais: '+(error?.message || error),true);
   }
 })();
 </script>
