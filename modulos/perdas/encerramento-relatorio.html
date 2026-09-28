@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encerramento do Relatório</title>
+</head>
+<body>
+<!--
+Página-base de encerramento. A integração definitiva deve reutilizar
+a autenticação, Supabase e identificação do relatório do index-base.html.
+-->
+
+<style id="encerramento-style">
+  .enc-overlay{position:fixed;inset:0;background:rgba(15,23,42,.62);display:none;align-items:center;justify-content:center;z-index:9999;padding:24px}
+  .enc-overlay.open{display:flex}
+  .enc-card{width:min(760px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.28);padding:28px}
+  .enc-title{margin:0 0 6px;font-size:24px;font-weight:800}
+  .enc-subtitle{margin:0 0 22px;color:#64748b}
+  .enc-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:22px}
+  .enc-meta div{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px}
+  .enc-meta small{display:block;color:#64748b;margin-bottom:4px}
+  .enc-label{display:block;font-weight:700;margin:18px 0 8px}
+  .enc-options{display:flex;gap:12px;flex-wrap:wrap}
+  .enc-option{display:flex;align-items:center;gap:8px;border:1px solid #cbd5e1;border-radius:10px;padding:10px 14px;cursor:pointer}
+  .enc-option:has(input:checked){border-color:#2563eb;background:#eff6ff}
+  .enc-textarea{width:100%;min-height:120px;resize:vertical;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:10px;padding:12px;font:inherit}
+  .enc-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
+  .enc-btn{border:0;border-radius:10px;padding:11px 18px;font-weight:700;cursor:pointer}
+  .enc-btn-secondary{background:#e2e8f0;color:#0f172a}
+  .enc-btn-primary{background:#2563eb;color:#fff}
+  .enc-error{display:none;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;margin-top:14px}
+  .enc-error.show{display:block}
+  .enc-conditional{display:none;margin-top:12px}
+  .enc-conditional.show{display:block}
+  @media(max-width:600px){.enc-card{padding:20px}.enc-meta{grid-template-columns:1fr}}
+</style>
+
+<div id="encerramentoOverlay" class="enc-overlay" aria-hidden="true">
+  <section class="enc-card" role="dialog" aria-modal="true" aria-labelledby="encTitle">
+    <h2 id="encTitle" class="enc-title">Encerramento do Relatório</h2>
+    <p class="enc-subtitle">Antes de finalizar, registre as ocorrências identificadas durante o processo.</p>
+
+    <div class="enc-meta">
+      <div><small>Filial</small><strong id="encFilial">—</strong></div>
+      <div><small>Ciclo</small><strong id="encCiclo">—</strong></div>
+      <div><small>Auditor</small><strong id="encAuditor">—</strong></div>
+      <div><small>Data</small><strong id="encData">—</strong></div>
+    </div>
+
+    <label class="enc-label">Houve alguma intercorrência?</label>
+    <div class="enc-options">
+      <label class="enc-option"><input type="radio" name="encIntercorrencia" value="nao"> Não</label>
+      <label class="enc-option"><input type="radio" name="encIntercorrencia" value="sim"> Sim</label>
+    </div>
+    <div id="encIntercorrenciaBox" class="enc-conditional">
+      <label class="enc-label" for="encIntercorrenciaTexto">Descreva a intercorrência</label>
+      <textarea id="encIntercorrenciaTexto" class="enc-textarea"></textarea>
+    </div>
+
+    <label class="enc-label">Houve alguma notificação no Checklist Fácil?</label>
+    <div class="enc-options">
+      <label class="enc-option"><input type="radio" name="encChecklist" value="nao"> Não</label>
+      <label class="enc-option"><input type="radio" name="encChecklist" value="sim"> Sim</label>
+    </div>
+    <div id="encChecklistBox" class="enc-conditional">
+      <label class="enc-label" for="encChecklistTexto">Descreva a notificação</label>
+      <textarea id="encChecklistTexto" class="enc-textarea"></textarea>
+    </div>
+
+    <div id="encError" class="enc-error"></div>
+
+    <div class="enc-actions">
+      <button type="button" class="enc-btn enc-btn-secondary" id="encCancelar">Voltar</button>
+      <button type="button" class="enc-btn enc-btn-primary" id="encSalvar">Salvar e Finalizar</button>
+    </div>
+  </section>
+</div>
+
+<script id="encerramento-script">
+(function(){
+  const overlay = document.getElementById('encerramentoOverlay');
+  const errorBox = document.getElementById('encError');
+
+  function setConditional(name, boxId){
+    document.querySelectorAll('input[name="'+name+'"]').forEach(r => {
+      r.addEventListener('change', () => {
+        const box = document.getElementById(boxId);
+        box.classList.toggle('show', r.checked && r.value === 'sim');
+      });
+    });
+  }
+
+  setConditional('encIntercorrencia','encIntercorrenciaBox');
+  setConditional('encChecklist','encChecklistBox');
+
+  function getRadio(name){
+    const el = document.querySelector('input[name="'+name+'"]:checked');
+    return el ? el.value : null;
+  }
+
+  function reportContext(){
+    let ctx = null;
+    try { ctx = JSON.parse(localStorage.getItem('relatorioPerdasEncerramentoPendente') || 'null'); } catch(e){}
+    return ctx || {};
+  }
+
+  function openPage(){
+    const ctx = reportContext();
+    document.getElementById('encFilial').textContent = ctx.filial || '—';
+    document.getElementById('encCiclo').textContent = ctx.ciclo || '—';
+    document.getElementById('encAuditor').textContent = ctx.auditor || '—';
+    document.getElementById('encData').textContent = new Date().toLocaleString('pt-BR');
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden','false');
+  }
+
+  document.getElementById('encCancelar').addEventListener('click', () => {
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden','true');
+  });
+
+  document.getElementById('encSalvar').addEventListener('click', () => {
+    errorBox.classList.remove('show');
+
+    const interc = getRadio('encIntercorrencia');
+    const checklist = getRadio('encChecklist');
+
+    if (!interc || !checklist){
+      errorBox.textContent = 'Responda as duas perguntas antes de finalizar o relatório.';
+      errorBox.classList.add('show');
+      return;
+    }
+
+    if (interc === 'sim' && !document.getElementById('encIntercorrenciaTexto').value.trim()){
+      errorBox.textContent = 'Descreva a intercorrência registrada.';
+      errorBox.classList.add('show');
+      return;
+    }
+
+    if (checklist === 'sim' && !document.getElementById('encChecklistTexto').value.trim()){
+      errorBox.textContent = 'Descreva a notificação do Checklist Fácil.';
+      errorBox.classList.add('show');
+      return;
+    }
+
+    const encerramento = {
+      ...reportContext(),
+      intercorrencia: interc,
+      intercorrencia_descricao: document.getElementById('encIntercorrenciaTexto').value.trim(),
+      checklist_facil: checklist,
+      checklist_facil_descricao: document.getElementById('encChecklistTexto').value.trim(),
+      encerramento_registrado_em: new Date().toISOString()
+    };
+
+    localStorage.setItem('encerramentoRelatorioPendente', JSON.stringify(encerramento));
+
+    // A gravação definitiva no Supabase e a mudança de status devem
+    // ser conectadas à função de finalização existente após validação
+    // da estrutura atual do banco.
+    window.dispatchEvent(new CustomEvent('encerramentoRelatorioSalvo', {detail: encerramento}));
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden','true');
+
+    localStorage.setItem('encerramentoRelatorioPendenteFinal', JSON.stringify(encerramento));
+
+    const returnUrl = new URLSearchParams(window.location.search).get('return');
+    if (returnUrl) {
+      const sep = returnUrl.includes('?') ? '&' : '?';
+      const reportId = encodeURIComponent(encerramento.report_id || '');
+      window.location.href = returnUrl + sep + 'encerramento_concluido=1&relatorio_id=' + reportId;
+    } else {
+      alert('Encerramento preenchido. Retorne ao relatório para concluir a finalização.');
+    }
+  });
+
+  window.abrirPaginaEncerramento = openPage;
+})();
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => window.abrirPaginaEncerramento());
+</script>
+</body>
+</html>
