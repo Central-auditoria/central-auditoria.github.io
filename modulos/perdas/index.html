@@ -769,6 +769,48 @@ function reportListData(snapshot){
   };
 }
 
+function parseFilialCadastro(value){
+  const raw=String(value||'').trim();
+  if(!raw) return {numero:null,nome:null};
+  const parts=raw.split(/\s*[—–-]\s*/,2);
+  const numero=(parts[0]||'').trim();
+  const nome=(parts[1]||'').trim();
+  return {
+    numero:numero || raw,
+    nome:nome || null
+  };
+}
+
+async function syncFilialCadastro(reportId, snapshot){
+  const ident=parseFilialCadastro(snapshot?.entrada?.filial || currentReport?.filial);
+  if(!ident.numero) return null;
+
+  const gestorNome=snapshot?.entrada?.gestor || currentReport?.gestor || null;
+  const gestorMatricula=currentReport?.matriculaGestor || '';
+  const auditorNome=snapshot?.entrada?.auditor || currentReport?.auditor || null;
+  const auditorMatricula=currentReport?.matriculaAuditor || '';
+
+  const payload={
+    numero:ident.numero,
+    nome:ident.nome,
+    gestor_nome:gestorNome,
+    gestor_matricula:gestorMatricula || null,
+    auditor_ultimo_balanco_nome:auditorNome,
+    auditor_ultimo_balanco_matricula:auditorMatricula || null,
+    ultimo_relatorio_id:reportId || null,
+    ultima_atualizacao:new Date().toISOString()
+  };
+
+  const result=await supabaseClient
+    .from('filiais')
+    .upsert(payload,{onConflict:'numero'})
+    .select('id,numero,nome,ultimo_relatorio_id')
+    .single();
+
+  if(result.error) throw result.error;
+  return result.data;
+}
+
 async function saveReport(){
   if(reportReadOnlyOverride){
     $('status').textContent='Este relatório está aberto em modo de consulta administrativa.';
@@ -814,8 +856,12 @@ async function saveReport(){
 
     if(result.error) throw result.error;
     reportId=result.data.id;
+
+    // O preenchimento do relatório cria/atualiza automaticamente o cadastro da filial.
+    await syncFilialCadastro(reportId,snapshot);
+
     reportStatus=result.data.status;
-    $('status').textContent='Relatório salvo com sucesso.';
+    $('status').textContent='Relatório salvo com sucesso. Cadastro da filial atualizado.';
     applyReportMode();
     return true;
   }catch(error){
@@ -870,6 +916,11 @@ async function finalizeReport(){
     if(result.error) throw result.error;
 
     reportId=result.data.id;
+
+    // Mesmo no fluxo de finalização, a filial é criada/atualizada
+    // automaticamente a partir dos dados do relatório.
+    await syncFilialCadastro(reportId,snapshot);
+
     reportStatus='em_andamento';
 
     const ctx={
