@@ -912,14 +912,51 @@ async function finalizeReportAfterClosing(encerramento){
     if(loaded.error) throw loaded.error;
     if(!loaded.data?.snapshot) throw new Error('O relatório não possui snapshot válido.');
 
+    const registradoEm=encerramento.encerramento_registrado_em || new Date().toISOString();
+
+    const encerramentoRegistro={
+      relatorio_id:encerramento.report_id,
+      intercorrencia:encerramento.intercorrencia === 'sim',
+      intercorrencia_descricao:encerramento.intercorrencia_descricao || null,
+      checklist_facil:encerramento.checklist_facil === 'sim',
+      checklist_facil_descricao:encerramento.checklist_facil_descricao || null,
+      registrado_em:registradoEm
+    };
+
+    // Primeiro grava o encerramento em uma tabela própria.
+    // Se essa gravação falhar, o relatório NÃO será finalizado.
+    let encerramentoResult=await supabaseClient
+      .from('relatorios_perdas_encerramentos')
+      .insert(encerramentoRegistro)
+      .select('id,relatorio_id,registrado_em')
+      .single();
+
+    // Se o usuário repetir o retorno após uma falha anterior,
+    // aproveitamos o encerramento que já foi gravado.
+    if(encerramentoResult.error){
+      const duplicate=String(encerramentoResult.error.code||'')==='23505';
+      if(duplicate){
+        const existing=await supabaseClient
+          .from('relatorios_perdas_encerramentos')
+          .select('id,relatorio_id,registrado_em')
+          .eq('relatorio_id',encerramento.report_id)
+          .single();
+        if(existing.error) throw existing.error;
+        encerramentoResult={data:existing.data,error:null};
+      }else{
+        throw encerramentoResult.error;
+      }
+    }
+
     const finalSnapshot={
       ...loaded.data.snapshot,
       encerramento:{
+        id:encerramentoResult.data.id,
         intercorrencia:encerramento.intercorrencia,
         intercorrencia_descricao:encerramento.intercorrencia_descricao || '',
         checklist_facil:encerramento.checklist_facil,
         checklist_facil_descricao:encerramento.checklist_facil_descricao || '',
-        encerramento_registrado_em:encerramento.encerramento_registrado_em || new Date().toISOString()
+        encerramento_registrado_em:registradoEm
       }
     };
 
