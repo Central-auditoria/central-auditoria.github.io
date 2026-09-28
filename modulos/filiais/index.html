@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Filiais — Central de Auditoria Nissei</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f7fa}
   .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,.05)}
@@ -96,9 +95,8 @@
 </div>
 
 <script>
-const SUPABASE_URL = 'https://sckwjszqvlbqhfnyxqtl.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_Cdgo8O0bLb1Jd1uTuhlp1A_qTJpbbXj';
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import { supabase } from '../../js/auth.js';
+const supabaseClient = supabase;
 
 let currentUser = null;
 let currentProfile = null;
@@ -128,7 +126,7 @@ async function carregarUsuario(){
   const {data:{session},error} = await supabaseClient.auth.getSession();
   if(error) throw error;
   if(!session){
-    window.location.href = '../../index.html';
+    window.location.href = '../../central/';
     return false;
   }
 
@@ -330,7 +328,7 @@ $('numeroFilial').addEventListener('keydown',e=>{if(e.key==='Enter') buscarFilia
 $('excluirBtn').addEventListener('click',abrirModalExclusao);
 $('cancelarExclusao').addEventListener('click',fecharModal);
 $('confirmarExclusao').addEventListener('click',excluirFilial);
-$('logoutBtn').addEventListener('click',async()=>{await supabaseClient.auth.signOut();window.location.href='../../index.html';});
+$('logoutBtn').addEventListener('click',async()=>{await supabaseClient.auth.signOut();window.location.href='../../central/';});
 
 (async()=>{
   try{
