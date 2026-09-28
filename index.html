@@ -6,6 +6,27 @@
   <meta name="theme-color" content="#005b8f">
   <title>Login | Central de Auditoria Nissei</title>
   <link rel="stylesheet" href="css/login.css">
+  <style>
+    .forgot-password {
+      display: block;
+      width: 100%;
+      margin-top: 12px;
+      padding: 8px 4px;
+      border: 0;
+      background: transparent;
+      color: #005b8f;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .forgot-password:hover {
+      text-decoration: underline;
+    }
+    .forgot-password:disabled {
+      opacity: .6;
+      cursor: default;
+    }
+  </style>
 </head>
 <body>
   <main class="login-page">
@@ -28,6 +49,10 @@
         <div id="authMsg" class="message" role="alert" aria-live="polite"></div>
 
         <button id="loginBtn" class="primary" type="submit">Entrar</button>
+
+        <button id="forgotPasswordBtn" class="forgot-password" type="button">
+          Esqueci minha senha
+        </button>
       </form>
 
       <div class="login-footer">
@@ -49,6 +74,7 @@
     const email = document.getElementById("email");
     const password = document.getElementById("password");
     const loginBtn = document.getElementById("loginBtn");
+    const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
     const authMsg = document.getElementById("authMsg");
 
     function showMessage(text, type = "error") {
@@ -62,6 +88,41 @@
         window.location.replace("central/");
       }
     }
+
+    forgotPasswordBtn.addEventListener("click", async () => {
+      authMsg.className = "message";
+      authMsg.textContent = "";
+
+      const userEmail = email.value.trim();
+
+      if (!userEmail) {
+        showMessage("Informe seu e-mail para receber o link de recuperação.");
+        email.focus();
+        return;
+      }
+
+      forgotPasswordBtn.disabled = true;
+      forgotPasswordBtn.textContent = "Enviando...";
+
+      const redirectTo = `${window.location.origin}/reset-password.html`;
+
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+        redirectTo
+      });
+
+      forgotPasswordBtn.disabled = false;
+      forgotPasswordBtn.textContent = "Esqueci minha senha";
+
+      if (error) {
+        showMessage("Não foi possível solicitar a recuperação agora. Tente novamente.");
+        return;
+      }
+
+      showMessage(
+        "Se o e-mail estiver cadastrado, você receberá um link para redefinir sua senha.",
+        "success"
+      );
+    });
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
