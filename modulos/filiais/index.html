@@ -394,6 +394,25 @@ function escapeHtml(value){
   }[ch]));
 }
 
+function parseFilialCadastro(value){
+  const texto=String(value ?? '').trim();
+  if(!texto) return {numero:'',nome:''};
+
+  // Aceita formatos como:
+  // "123 - Teste", "123 — Teste", "Filial 123 - Teste"
+  const m=texto.match(/(?:filial\s*)?(\d+)\s*(?:-|—|–|:)\s*(.*)$/i);
+  if(m){
+    return {numero:m[1],nome:(m[2] || '').trim()};
+  }
+
+  const somenteNumero=texto.match(/^\d+$/);
+  if(somenteNumero){
+    return {numero:texto,nome:''};
+  }
+
+  return {numero:'',nome:texto};
+}
+
 async function abrirSnapshot(reportId){
   const modal=document.getElementById('snapshotModal');
   const titulo=document.getElementById('snapshotTitulo');
