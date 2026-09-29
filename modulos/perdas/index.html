@@ -810,13 +810,13 @@ async function syncFilialCadastro(reportId, snapshot){
 
     if(result.error){
       console.warn('Não foi possível sincronizar o cadastro da filial. O relatório continuará sendo salvo.',result.error);
-      return null;
+      return {data:null,error:result.error.message || String(result.error)};
     }
 
-    return result.data;
+    return {data:result.data,error:null};
   }catch(error){
     console.warn('Falha na sincronização da filial. O relatório continuará sendo salvo.',error);
-    return null;
+    return {data:null,error:error.message || String(error)};
   }
 }
 
@@ -867,10 +867,15 @@ async function saveReport(){
     reportId=result.data.id;
 
     // O preenchimento do relatório cria/atualiza automaticamente o cadastro da filial.
-    syncFilialCadastro(reportId,snapshot);
+    const filialSync=await syncFilialCadastro(reportId,snapshot);
 
     reportStatus=result.data.status;
-    $('status').textContent='Relatório salvo com sucesso.';
+    if(filialSync?.error){
+      $('status').textContent='Relatório salvo, mas o cadastro da filial não foi atualizado: '+filialSync.error;
+      console.warn('Falha no cadastro automático da filial:',filialSync.error);
+    }else{
+      $('status').textContent='Relatório salvo e filial cadastrada/atualizada com sucesso.';
+    }
     applyReportMode();
     return true;
   }catch(error){
@@ -928,7 +933,10 @@ async function finalizeReport(){
 
     // Mesmo no fluxo de finalização, a filial é criada/atualizada
     // automaticamente a partir dos dados do relatório.
-    syncFilialCadastro(reportId,snapshot);
+    const filialSync=await syncFilialCadastro(reportId,snapshot);
+    if(filialSync?.error){
+      console.warn('Relatório salvo, mas o cadastro da filial não foi atualizado:',filialSync.error);
+    }
 
     reportStatus='em_andamento';
 
