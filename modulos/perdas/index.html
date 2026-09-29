@@ -295,6 +295,30 @@ button,.file{border:0;border-radius:10px;padding:12px 16px;font-weight:700;curso
   transform:translateY(-1px);
 }
 
+
+  .enc-overlay{position:fixed;inset:0;background:rgba(15,23,42,.62);display:none;align-items:center;justify-content:center;z-index:9999;padding:24px}
+  .enc-overlay.open{display:flex}
+  .enc-card{width:min(760px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.28);padding:28px}
+  .enc-title{margin:0 0 6px;font-size:24px;font-weight:800}
+  .enc-subtitle{margin:0 0 22px;color:#64748b}
+  .enc-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:22px}
+  .enc-meta div{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px}
+  .enc-meta small{display:block;color:#64748b;margin-bottom:4px}
+  .enc-label{display:block;font-weight:700;margin:18px 0 8px}
+  .enc-options{display:flex;gap:12px;flex-wrap:wrap}
+  .enc-option{display:flex;align-items:center;gap:8px;border:1px solid #cbd5e1;border-radius:10px;padding:10px 14px;cursor:pointer}
+  .enc-option:has(input:checked){border-color:#2563eb;background:#eff6ff}
+  .enc-textarea{width:100%;min-height:120px;resize:vertical;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:10px;padding:12px;font:inherit}
+  .enc-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
+  .enc-btn{border:0;border-radius:10px;padding:11px 18px;font-weight:700;cursor:pointer}
+  .enc-btn-secondary{background:#e2e8f0;color:#0f172a}
+  .enc-btn-primary{background:#2563eb;color:#fff}
+  .enc-error{display:none;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;margin-top:14px}
+  .enc-error.show{display:block}
+  .enc-conditional{display:none;margin-top:12px}
+  .enc-conditional.show{display:block}
+  @media(max-width:600px){.enc-card{padding:20px}.enc-meta{grid-template-columns:1fr}}
+
 </style></head><body>
 <div class="central-navigation">
   <a class="central-home-btn" href="../../central/" title="Voltar à página inicial da Central">
@@ -882,48 +906,64 @@ async function saveReport(){
   }
 }
 
-async function finalizeReport(){
+function finalizeReport(){
   if(reportStatus==='finalizado' || reportReadOnlyOverride) return;
   if(!currentReport){
     $('status').textContent='Gere o painel antes de finalizar o relatório.';
     nav('p2');
     return;
   }
-  const confirmed=window.confirm('Finalizar este relatório? Depois de finalizado, os dados das abas Entrada, Painel e Análise não poderão mais ser alterados.');
+
+  const confirmed=window.confirm('Finalizar este relatório? Antes da finalização, será necessário registrar o encerramento do relatório.');
   if(!confirmed) return;
 
+  abrirEncerramentoRelatorio();
+}
+
+async function concluirFinalizacaoComEncerramento(encerramento){
   const user=await ensureAuthenticated();
   if(!user) return;
 
-  const snapshot=getReportSnapshot();
+  const snapshotBase=getReportSnapshot();
+  const snapshot={
+    ...snapshotBase,
+    encerramento:{
+      ...(snapshotBase.encerramento || {}),
+      ...encerramento
+    }
+  };
   const meta=reportListData(snapshot);
+
   $('finalizeReport').disabled=true;
   $('saveReport').disabled=true;
   $('status').textContent='Finalizando relatório…';
 
   try{
     let result;
+    const payload={...meta,snapshot,status:'finalizado',finalized_at:new Date().toISOString()};
+
     if(reportId){
       result=await supabaseClient
         .from('relatorios_perdas')
-        .update({...meta,snapshot,status:'finalizado',finalized_at:new Date().toISOString()})
+        .update(payload)
         .eq('id',reportId)
         .select('id,status,finalized_at')
         .single();
     }else{
       result=await supabaseClient
         .from('relatorios_perdas')
-        .insert({created_by:user.id,...meta,snapshot,status:'finalizado',finalized_at:new Date().toISOString()})
+        .insert({created_by:user.id,...payload})
         .select('id,status,finalized_at')
         .single();
     }
 
     if(result.error) throw result.error;
+
     reportId=result.data.id;
     finalizedSnapshot=snapshot;
     reportStatus='finalizado';
     applyReportMode();
-    $('status').textContent='Relatório finalizado e bloqueado para alterações.';
+    $('status').textContent='Relatório finalizado e encerramento salvo com sucesso.';
     nav('p2');
   }catch(error){
     console.error(error);
@@ -932,6 +972,102 @@ async function finalizeReport(){
     $('saveReport').disabled=false;
   }
 }
+
+function abrirEncerramentoRelatorio(){
+  const overlay=document.getElementById('encerramentoOverlay');
+  if(!overlay){
+    $('status').textContent='Erro: página de encerramento não carregada.';
+    return;
+  }
+
+  const filial=$('filial')?.value || currentReport?.filial || '—';
+  const ciclo=$('cicloAtual')?.value || currentReport?.cicloAtual || '—';
+  const auditor=$('auditor')?.value || currentReport?.auditor || '—';
+
+  document.getElementById('encFilial').textContent=filial;
+  document.getElementById('encCiclo').textContent=ciclo;
+  document.getElementById('encAuditor').textContent=auditor;
+  document.getElementById('encData').textContent=new Date().toLocaleString('pt-BR');
+
+  // Limpa escolhas de uma eventual tentativa anterior.
+  document.querySelectorAll('#encerramentoOverlay input[type="radio"]').forEach(r=>r.checked=false);
+  const i=document.getElementById('encIntercorrenciaTexto');
+  const c=document.getElementById('encChecklistTexto');
+  if(i) i.value='';
+  if(c) c.value='';
+  document.getElementById('encIntercorrenciaBox')?.classList.remove('show');
+  document.getElementById('encChecklistBox')?.classList.remove('show');
+  document.getElementById('encError')?.classList.remove('show');
+
+  overlay.classList.add('open');
+  overlay.setAttribute('aria-hidden','false');
+}
+
+function fecharEncerramentoRelatorio(){
+  const overlay=document.getElementById('encerramentoOverlay');
+  if(!overlay) return;
+  overlay.classList.remove('open');
+  overlay.setAttribute('aria-hidden','true');
+}
+
+
+(function initEncerramentoInline(){
+  function setConditional(name,boxId){
+    document.querySelectorAll('#encerramentoOverlay input[name="'+name+'"]').forEach(r=>{
+      r.addEventListener('change',()=>{
+        const box=document.getElementById(boxId);
+        if(box) box.classList.toggle('show',r.checked && r.value==='sim');
+      });
+    });
+  }
+
+  setConditional('encIntercorrencia','encIntercorrenciaBox');
+  setConditional('encChecklist','encChecklistBox');
+
+  const cancelar=document.getElementById('encCancelar');
+  const salvar=document.getElementById('encSalvar');
+
+  cancelar?.addEventListener('click',fecharEncerramentoRelatorio);
+
+  salvar?.addEventListener('click',()=>{
+    const errorBox=document.getElementById('encError');
+    errorBox.classList.remove('show');
+
+    const interc=document.querySelector('#encerramentoOverlay input[name="encIntercorrencia"]:checked')?.value;
+    const checklist=document.querySelector('#encerramentoOverlay input[name="encChecklist"]:checked')?.value;
+    const intercTexto=document.getElementById('encIntercorrenciaTexto')?.value.trim() || '';
+    const checklistTexto=document.getElementById('encChecklistTexto')?.value.trim() || '';
+
+    if(!interc || !checklist){
+      errorBox.textContent='Responda as duas perguntas antes de finalizar o relatório.';
+      errorBox.classList.add('show');
+      return;
+    }
+
+    if(interc==='sim' && !intercTexto){
+      errorBox.textContent='Descreva a intercorrência registrada.';
+      errorBox.classList.add('show');
+      return;
+    }
+
+    if(checklist==='sim' && !checklistTexto){
+      errorBox.textContent='Descreva a notificação do Checklist Fácil.';
+      errorBox.classList.add('show');
+      return;
+    }
+
+    const encerramento={
+      intercorrencia:interc,
+      intercorrencia_descricao:intercTexto,
+      checklist_facil:checklist,
+      checklist_facil_descricao:checklistTexto,
+      encerramento_registrado_em:new Date().toISOString()
+    };
+
+    fecharEncerramentoRelatorio();
+    concluirFinalizacaoComEncerramento(encerramento);
+  });
+})();
 
 function processPaste(textareaId,target,statusId){if(!ensureEditable()) return false;try{$(statusId).textContent='Processando…';const data=readProcfitText($(textareaId).value);if(target==='current')baseAtual=data;else baseAnterior=data;$(statusId).textContent=`${data.length} divergências processadas.`;$(statusId).style.color='var(--green)';return true}catch(e){$(statusId).textContent='Erro: '+e.message;$(statusId).style.color='var(--red)';return false}}
 function nav(p){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(p).classList.add('active');document.querySelectorAll('.nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===p));window.scrollTo({top:0,behavior:'smooth'})}document.querySelectorAll('.nav button[data-page]').forEach(b=>b.addEventListener('click',()=>nav(b.dataset.page)));document.querySelectorAll('#fatAtual,#fatAnt').forEach(el=>el.addEventListener('paste',()=>setTimeout(()=>{const v=num(el.value);if(v)el.value=brl(v)},80)));$('processBases').addEventListener('click',()=>{if(!ensureEditable()) return;processPaste('baseAtualPaste','current','baseAtualStatus');processPaste('baseAntPaste','previous','baseAntStatus')});$('baseAtualPaste').addEventListener('paste',()=>setTimeout(()=>processPaste('baseAtualPaste','current','baseAtualStatus'),80));$('baseAntPaste').addEventListener('paste',()=>setTimeout(()=>processPaste('baseAntPaste','previous','baseAntStatus'),80));$('generate').addEventListener('click',()=>{if(!ensureEditable()) return;const okA=baseAtual.length||processPaste('baseAtualPaste','current','baseAtualStatus');const okP=baseAnterior.length||processPaste('baseAntPaste','previous','baseAntStatus');if(!okA||!okP){$('status').textContent='Cole e processe as duas bases Procfit antes de gerar o painel.';return}syncReport();nav('p2')});
@@ -1256,4 +1392,44 @@ render({filial:'—',gestor:'—',matriculaGestor:'',auditor:'—',cicloAtual:'�
   if(!user) return;
   await openSavedReport(id);
 })();
-</script></body></html>
+</script><div id="encerramentoOverlay" class="enc-overlay" aria-hidden="true">
+  <section class="enc-card" role="dialog" aria-modal="true" aria-labelledby="encTitle">
+    <h2 id="encTitle" class="enc-title">Encerramento do Relatório</h2>
+    <p class="enc-subtitle">Antes de finalizar, registre as ocorrências identificadas durante o processo.</p>
+
+    <div class="enc-meta">
+      <div><small>Filial</small><strong id="encFilial">—</strong></div>
+      <div><small>Ciclo</small><strong id="encCiclo">—</strong></div>
+      <div><small>Auditor</small><strong id="encAuditor">—</strong></div>
+      <div><small>Data</small><strong id="encData">—</strong></div>
+    </div>
+
+    <label class="enc-label">Houve alguma intercorrência?</label>
+    <div class="enc-options">
+      <label class="enc-option"><input type="radio" name="encIntercorrencia" value="nao"> Não</label>
+      <label class="enc-option"><input type="radio" name="encIntercorrencia" value="sim"> Sim</label>
+    </div>
+    <div id="encIntercorrenciaBox" class="enc-conditional">
+      <label class="enc-label" for="encIntercorrenciaTexto">Descreva a intercorrência</label>
+      <textarea id="encIntercorrenciaTexto" class="enc-textarea"></textarea>
+    </div>
+
+    <label class="enc-label">Houve alguma notificação no Checklist Fácil?</label>
+    <div class="enc-options">
+      <label class="enc-option"><input type="radio" name="encChecklist" value="nao"> Não</label>
+      <label class="enc-option"><input type="radio" name="encChecklist" value="sim"> Sim</label>
+    </div>
+    <div id="encChecklistBox" class="enc-conditional">
+      <label class="enc-label" for="encChecklistTexto">Descreva a notificação</label>
+      <textarea id="encChecklistTexto" class="enc-textarea"></textarea>
+    </div>
+
+    <div id="encError" class="enc-error"></div>
+
+    <div class="enc-actions">
+      <button type="button" class="enc-btn enc-btn-secondary" id="encCancelar">Voltar</button>
+      <button type="button" class="enc-btn enc-btn-primary" id="encSalvar">Salvar e Finalizar</button>
+    </div>
+  </section>
+</div>
+</body></html>
