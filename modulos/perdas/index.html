@@ -791,8 +791,8 @@ async function syncFilialCadastro(reportId, snapshot){
   const auditorMatricula=currentReport?.matriculaAuditor || '';
 
   const payload={
-    numero:ident.numero,
-    nome:ident.nome,
+    codigo:Number(ident.numero),
+    nome_atual:ident.nome,
     gestor_nome:gestorNome,
     gestor_matricula:gestorMatricula || null,
     auditor_ultimo_balanco_nome:auditorNome,
@@ -804,8 +804,8 @@ async function syncFilialCadastro(reportId, snapshot){
   try{
     const result=await supabaseClient
       .from('filiais')
-      .upsert(payload,{onConflict:'numero'})
-      .select('id,numero,nome,ultimo_relatorio_id')
+      .upsert(payload,{onConflict:'codigo'})
+      .select('id,codigo,nome_atual,ultimo_relatorio_id')
       .single();
 
     if(result.error){
