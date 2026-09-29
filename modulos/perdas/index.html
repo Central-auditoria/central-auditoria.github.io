@@ -1011,8 +1011,8 @@ function fecharEncerramentoRelatorio(){
 }
 
 
-(function initEncerramentoInline(){
-  function setConditional(name,boxId){
+document.addEventListener('DOMContentLoaded',()=>{
+function setConditional(name,boxId){
     document.querySelectorAll('#encerramentoOverlay input[name="'+name+'"]').forEach(r=>{
       r.addEventListener('change',()=>{
         const box=document.getElementById(boxId);
@@ -1067,7 +1067,7 @@ function fecharEncerramentoRelatorio(){
     fecharEncerramentoRelatorio();
     concluirFinalizacaoComEncerramento(encerramento);
   });
-})();
+});
 
 function processPaste(textareaId,target,statusId){if(!ensureEditable()) return false;try{$(statusId).textContent='Processando…';const data=readProcfitText($(textareaId).value);if(target==='current')baseAtual=data;else baseAnterior=data;$(statusId).textContent=`${data.length} divergências processadas.`;$(statusId).style.color='var(--green)';return true}catch(e){$(statusId).textContent='Erro: '+e.message;$(statusId).style.color='var(--red)';return false}}
 function nav(p){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(p).classList.add('active');document.querySelectorAll('.nav button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===p));window.scrollTo({top:0,behavior:'smooth'})}document.querySelectorAll('.nav button[data-page]').forEach(b=>b.addEventListener('click',()=>nav(b.dataset.page)));document.querySelectorAll('#fatAtual,#fatAnt').forEach(el=>el.addEventListener('paste',()=>setTimeout(()=>{const v=num(el.value);if(v)el.value=brl(v)},80)));$('processBases').addEventListener('click',()=>{if(!ensureEditable()) return;processPaste('baseAtualPaste','current','baseAtualStatus');processPaste('baseAntPaste','previous','baseAntStatus')});$('baseAtualPaste').addEventListener('paste',()=>setTimeout(()=>processPaste('baseAtualPaste','current','baseAtualStatus'),80));$('baseAntPaste').addEventListener('paste',()=>setTimeout(()=>processPaste('baseAntPaste','previous','baseAntStatus'),80));$('generate').addEventListener('click',()=>{if(!ensureEditable()) return;const okA=baseAtual.length||processPaste('baseAtualPaste','current','baseAtualStatus');const okP=baseAnterior.length||processPaste('baseAntPaste','previous','baseAntStatus');if(!okA||!okP){$('status').textContent='Cole e processe as duas bases Procfit antes de gerar o painel.';return}syncReport();nav('p2')});
