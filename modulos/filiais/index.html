@@ -266,21 +266,33 @@ async function carregarHistorico(f){
     return;
   }
 
-  // Busca os encerramentos separadamente para manter o módulo compatível
-  // mesmo se algum relatório ainda não possuir encerramento.
+  // O encerramento atual é gravado dentro do snapshot do próprio relatório.
+  // Mantemos a tabela antiga apenas como fallback para relatórios anteriores.
   const ids=relatorios.map(r=>r.id);
   const encerramentos=await supabaseClient
     .from('relatorios_perdas_encerramentos')
     .select('id,relatorio_id,intercorrencia,intercorrencia_descricao,checklist_facil,checklist_facil_descricao,registrado_em,registrado_por')
     .in('relatorio_id',ids);
 
-  const mapa=new Map((encerramentos.data||[]).map(e=>[e.relatorio_id,e]));
+  const mapa=new Map(
+    encerramentos.error ? [] : (encerramentos.data||[]).map(e=>[e.relatorio_id,e])
+  );
 
   $('historico').innerHTML=relatorios.map(r=>{
     const snap=r.snapshot||{};
     const entrada=snap.entrada||{};
     const auditor=entrada.auditor || snap.auditor || '—';
-    const enc=mapa.get(r.id);
+
+    // Primeiro usa o encerramento salvo no snapshot deste relatório.
+    // Assim o histórico da filial mostra exatamente o encerramento que
+    // foi registrado na finalização, sem depender de outra tabela.
+    const encSnapshot=snap.encerramento || null;
+    const encLegado=mapa.get(r.id) || null;
+    const enc=encSnapshot ? {
+      ...encSnapshot,
+      registrado_em:encSnapshot.encerramento_registrado_em || encSnapshot.registrado_em || r.finalized_at || r.created_at
+    } : encLegado;
+
     const status=(r.status||'').toLowerCase();
     const statusLabel=status==='finalizado'?'Finalizado':(status||'Em andamento');
     const statusClass=status==='finalizado'?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700';
@@ -303,12 +315,12 @@ async function carregarHistorico(f){
             <div class="grid md:grid-cols-2 gap-3 mt-3">
               <div class="rounded-lg bg-slate-50 p-3">
                 <div class="text-xs font-bold uppercase text-slate-500">Intercorrência</div>
-                <div class="font-bold mt-1">${enc.intercorrencia ? 'Sim' : 'Não'}</div>
+                <div class="font-bold mt-1">${String(enc.intercorrencia).toLowerCase()==='sim' || enc.intercorrencia===true ? 'Sim' : 'Não'}</div>
                 ${enc.intercorrencia && enc.intercorrencia_descricao ? `<div class="text-sm text-slate-600 mt-1">${escapeHtml(enc.intercorrencia_descricao)}</div>` : ''}
               </div>
               <div class="rounded-lg bg-slate-50 p-3">
                 <div class="text-xs font-bold uppercase text-slate-500">Checklist Fácil</div>
-                <div class="font-bold mt-1">${enc.checklist_facil ? 'Sim' : 'Não'}</div>
+                <div class="font-bold mt-1">${String(enc.checklist_facil).toLowerCase()==='sim' || enc.checklist_facil===true ? 'Sim' : 'Não'}</div>
                 ${enc.checklist_facil && enc.checklist_facil_descricao ? `<div class="text-sm text-slate-600 mt-1">${escapeHtml(enc.checklist_facil_descricao)}</div>` : ''}
               </div>
             </div>
