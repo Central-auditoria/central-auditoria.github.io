@@ -135,7 +135,7 @@ async function carregarUsuario(){
 
   const profileResult=await supabaseClient
     .from('profiles')
-    .select('id,user_id,nome,matricula,perfil')
+    .select('user_id,nome,matricula,perfil')
     .eq('user_id',currentUser.id)
     .maybeSingle();
 
