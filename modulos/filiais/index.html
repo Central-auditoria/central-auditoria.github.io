@@ -313,13 +313,16 @@ async function carregarHistorico(f){
               </div>
             </div>
             <div class="mt-4 flex flex-wrap gap-2">
-              <button type="button" class="btn secondary" onclick="abrirSnapshot('${escapeHtml(r.id)}')">Ver snapshot completo</button>
+              <button type="button" class="btn btn-primary" onclick="abrirRelatorio('${escapeHtml(r.id)}')">Abrir relatório completo</button>
             </div>
             <div class="text-xs text-slate-500 mt-3">Encerrado em ${escapeHtml(formatDate(enc.registrado_em))}</div>
           </div>
         ` : `
           <div class="mt-4 pt-4 border-t border-slate-100 text-sm text-slate-500">
             Este relatório ainda não possui encerramento registrado.
+            <div class="mt-4">
+              <button type="button" class="btn btn-primary" onclick="abrirRelatorio('${escapeHtml(r.id)}')">Abrir relatório completo</button>
+            </div>
           </div>
         `}
       </div>`;
@@ -413,6 +416,12 @@ function parseFilialCadastro(value){
   return {numero:'',nome:texto};
 }
 
+function abrirRelatorio(reportId){
+  if(!reportId) return;
+  const base='../../modulos/perdas/';
+  window.location.href=`${base}?relatorio=${encodeURIComponent(reportId)}`;
+}
+
 async function abrirSnapshot(reportId){
   const modal=document.getElementById('snapshotModal');
   const titulo=document.getElementById('snapshotTitulo');
@@ -478,7 +487,7 @@ async function abrirSnapshot(reportId){
         <h3>Identificação</h3>
         <div class="snapshot-grid">
           ${snapshotBox('Filial', filialTexto)}
-          ${snapshotBox('Data do relatório', formatDate(data.finalized_at || data.created_at))}
+          ${snapshotBox('Data do relatório', formatDateTime(data.finalized_at || data.created_at))}
           ${snapshotBox('Gestor', gestor)}
           ${snapshotBox('Auditor', auditor)}
           ${snapshotBox('Ciclo atual', cicloAtual)}
@@ -489,22 +498,22 @@ async function abrirSnapshot(reportId){
       <div class="snapshot-section">
         <h3>Resultados do relatório</h3>
         <div class="snapshot-grid">
-          ${snapshotBox('Faturamento atual', faturamentoAtual)}
-          ${snapshotBox('Faturamento anterior', faturamentoAnterior)}
-          ${snapshotBox('Total de falta', falta)}
-          ${snapshotBox('Total de sobra', sobra)}
-          ${snapshotBox('Resultado geral', geral)}
-          ${snapshotBox('Indicador operacional atual', indicadorAtual)}
-          ${snapshotBox('Indicador operacional anterior', indicadorAnterior)}
-          ${snapshotBox('Resultado final atual', resultadoAtual)}
-          ${snapshotBox('Resultado final anterior', resultadoAnterior)}
-          ${snapshotBox('Perda líquida', perdaLiquida)}
-          ${snapshotBox('Meta', meta)}
+          ${snapshotBox('Faturamento atual', formatMoney(faturamentoAtual))}
+          ${snapshotBox('Faturamento anterior', formatMoney(faturamentoAnterior))}
+          ${snapshotBox('Total de falta', formatMoney(falta))}
+          ${snapshotBox('Total de sobra', formatMoney(sobra))}
+          ${snapshotBox('Resultado geral', formatMoney(geral))}
+          ${snapshotBox('Indicador operacional atual', formatPercent(indicadorAtual))}
+          ${snapshotBox('Indicador operacional anterior', formatPercent(indicadorAnterior))}
+          ${snapshotBox('Resultado final atual', formatPercent(resultadoAtual))}
+          ${snapshotBox('Resultado final anterior', formatPercent(resultadoAnterior))}
+          ${snapshotBox('Perda líquida', formatPercent(perdaLiquida))}
+          ${snapshotBox('Meta', formatPercent(meta))}
         </div>
       </div>
 
       ${snapshotSection('Intercorrências',pick(snap.intercorrencias,snap.intercorrencia))}
-      ${snapshotSection('Encerramento',pick(snap.encerramento,snap.observacoes_encerramento))}
+      ${(snap.encerramento || snap.observacoes_encerramento) ? `<div class="snapshot-section"><h3>Encerramento</h3>${humanizeEncerramento(snap.encerramento || snap.observacoes_encerramento)}</div>` : ''}
       ${snapshotSection('Medidas disciplinares',pick(snap.medidas_disciplinares,snap.medida_disciplinar,snap.medidasDisciplinares))}
 
       <div class="snapshot-section">
@@ -527,6 +536,57 @@ async function abrirSnapshot(reportId){
     conteudo.innerHTML=`<div class="history-muted" style="color:#b91c1c;">Erro ao carregar o snapshot: ${escapeHtml(error.message || String(error))}</div>`;
     subtitulo.textContent='Não foi possível carregar o snapshot.';
   }
+}
+
+function formatMoney(value){
+  if(value===undefined || value===null || value==='' || value==='—') return '—';
+  const n=Number(value);
+  if(!Number.isFinite(n)) return String(value);
+  return n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+}
+
+function formatPercent(value){
+  if(value===undefined || value===null || value==='' || value==='—') return '—';
+  const n=Number(value);
+  if(!Number.isFinite(n)) return String(value);
+  return `${(n*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:4})}%`;
+}
+
+function formatDateTime(value){
+  if(!value || value==='—') return '—';
+  const d=new Date(value);
+  if(Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleString('pt-BR');
+}
+
+function humanizeEncerramento(value){
+  if(!value || value==='—') return '';
+  let obj=value;
+  if(typeof value==='string'){
+    try{ obj=JSON.parse(value); }catch(_){ return `<div class="snapshot-pre">${escapeHtml(value)}</div>`; }
+  }
+  if(typeof obj!=='object' || Array.isArray(obj)){
+    return `<div class="snapshot-pre">${escapeHtml(String(value))}</div>`;
+  }
+
+  const labels={
+    id:'Identificador',
+    intercorrencia:'Intercorrência',
+    checklist_facil:'Checklist fácil',
+    intercorrencia_descricao:'Descrição da intercorrência',
+    checklist_facil_descricao:'Descrição do checklist',
+    encerramento_registrado_em:'Registrado em'
+  };
+
+  const entries=Object.entries(obj).filter(([_,v])=>v!==undefined && v!==null && String(v).trim()!=='');
+  return `<div class="snapshot-grid snapshot-encerramento">
+    ${entries.map(([key,value])=>{
+      let display=value;
+      if(key==='encerramento_registrado_em') display=formatDateTime(value);
+      else if(typeof value==='boolean') display=value?'Sim':'Não';
+      return snapshotBox(labels[key] || key.replaceAll('_',' '),display);
+    }).join('')}
+  </div>`;
 }
 
 function snapshotBox(label,value){
