@@ -417,6 +417,9 @@ async function abrirSnapshot(reportId){
     if(error) throw error;
 
     const snap=data.snapshot ?? {};
+    const entrada=snap.entrada ?? {};
+    const rel=snap.currentReport ?? {};
+
     const pick=(...values)=>{
       for(const v of values){
         if(v!==undefined && v!==null && String(v).trim()!=='') return v;
@@ -424,40 +427,81 @@ async function abrirSnapshot(reportId){
       return '—';
     };
 
-    const entrada=snap.entrada ?? {};
-    const filialCodigo=pick(entrada.filial_numero,entrada.codigo_filial,snap.filial_numero,snap.codigo_filial);
-    const filialNome=pick(entrada.filial_nome,entrada.nome_filial,snap.filial_nome,snap.nome_filial);
-    const gestor=pick(entrada.gestor,snap.gestor_nome,snap.gestor?.nome);
-    const gestorMat=pick(entrada.gestor_matricula,snap.gestor_matricula,snap.gestor?.matricula);
-    const auditor=pick(entrada.auditor,snap.auditor_nome,snap.auditor?.nome);
-    const auditorMat=pick(entrada.auditor_matricula,snap.auditor_matricula,snap.auditor?.matricula);
+    const filialRaw=pick(entrada.filial,rel.filial,snap.filial);
+    const filialIdent=parseFilialCadastro(filialRaw);
+    const filialTexto=filialIdent.numero
+      ? `${filialIdent.numero}${filialIdent.nome ? ' — '+filialIdent.nome : ''}`
+      : filialRaw;
+
+    const gestor=pick(entrada.gestor,rel.gestor,snap.gestor);
+    const auditor=pick(entrada.auditor,rel.auditor,snap.auditor);
+
+    const cicloAtual=pick(entrada.cicloAtual,rel.cicloAtual);
+    const cicloAnterior=pick(entrada.cicloAnt,rel.cicloAnt);
+
+    const faturamentoAtual=pick(rel.fatAtual,entrada.fatAtual);
+    const faturamentoAnterior=pick(rel.fatAnt,entrada.fatAnt);
+    const indicadorAtual=pick(rel.indAtual,entrada.indAtual);
+    const indicadorAnterior=pick(rel.indAnt,entrada.indAnt);
+    const resultadoAtual=pick(rel.resAtual);
+    const resultadoAnterior=pick(rel.resAnt,entrada.resAntInput);
+    const perdaLiquida=pick(rel.perdaLiquidaAtual);
+    const falta=pick(rel.falta);
+    const sobra=pick(rel.sobra);
+    const geral=pick(rel.geral);
+    const meta=pick(rel.meta,entrada.meta);
 
     titulo.textContent='Snapshot do Relatório de Perdas';
     subtitulo.textContent=`Relatório ${data.id || '—'} • ${data.status || '—'}`;
 
     conteudo.innerHTML=`
-      <div class="snapshot-grid">
-        ${snapshotBox('Filial', `${filialCodigo} — ${filialNome}`)}
-        ${snapshotBox('Data do relatório', pick(entrada.data,snap.data_relatorio,snap.data,data.created_at))}
-        ${snapshotBox('Gestor', `${gestor} — ${gestorMat}`)}
-        ${snapshotBox('Auditor', `${auditor} — ${auditorMat}`)}
-        ${snapshotBox('Faturamento', pick(snap.faturamento,snap.faturamento_total,entrada.faturamento))}
-        ${snapshotBox('Total de falta', pick(snap.total_falta,snap.falta_total,snap.totalFalta))}
-        ${snapshotBox('Total de sobra', pick(snap.total_sobra,snap.sobra_total,snap.totalSobra))}
-        ${snapshotBox('Indicador operacional', pick(snap.indicador_operacional,snap.indicadorOperacional))}
-        ${snapshotBox('Resultado final', pick(snap.resultado_final,snap.resultadoFinal))}
-        ${snapshotBox('Perda líquida', pick(snap.perda_liquida,snap.perdaLiquida))}
+      <div class="snapshot-section">
+        <h3>Identificação</h3>
+        <div class="snapshot-grid">
+          ${snapshotBox('Filial', filialTexto)}
+          ${snapshotBox('Data do relatório', formatDate(data.finalized_at || data.created_at))}
+          ${snapshotBox('Gestor', gestor)}
+          ${snapshotBox('Auditor', auditor)}
+          ${snapshotBox('Ciclo atual', cicloAtual)}
+          ${snapshotBox('Ciclo anterior', cicloAnterior)}
+        </div>
       </div>
 
-      ${snapshotSection('Entrada do relatório',entrada)}
+      <div class="snapshot-section">
+        <h3>Resultados do relatório</h3>
+        <div class="snapshot-grid">
+          ${snapshotBox('Faturamento atual', faturamentoAtual)}
+          ${snapshotBox('Faturamento anterior', faturamentoAnterior)}
+          ${snapshotBox('Total de falta', falta)}
+          ${snapshotBox('Total de sobra', sobra)}
+          ${snapshotBox('Resultado geral', geral)}
+          ${snapshotBox('Indicador operacional atual', indicadorAtual)}
+          ${snapshotBox('Indicador operacional anterior', indicadorAnterior)}
+          ${snapshotBox('Resultado final atual', resultadoAtual)}
+          ${snapshotBox('Resultado final anterior', resultadoAnterior)}
+          ${snapshotBox('Perda líquida', perdaLiquida)}
+          ${snapshotBox('Meta', meta)}
+        </div>
+      </div>
+
       ${snapshotSection('Intercorrências',pick(snap.intercorrencias,snap.intercorrencia))}
       ${snapshotSection('Encerramento',pick(snap.encerramento,snap.observacoes_encerramento))}
       ${snapshotSection('Medidas disciplinares',pick(snap.medidas_disciplinares,snap.medida_disciplinar,snap.medidasDisciplinares))}
 
       <div class="snapshot-section">
-        <h3>Snapshot completo</h3>
-        <pre class="snapshot-pre">${escapeHtml(JSON.stringify(snap,null,2))}</pre>
+        <h3>Informações detalhadas do relatório</h3>
+        <div class="snapshot-grid">
+          ${snapshotBox('Itens de falta no ranking',Array.isArray(rel.faltas)?rel.faltas.length:'—')}
+          ${snapshotBox('Itens de sobra no ranking',Array.isArray(rel.sobras)?rel.sobras.length:'—')}
+          ${snapshotBox('Setores ofensores',Array.isArray(rel.setores)?rel.setores.length:'—')}
+          ${snapshotBox('Versão do snapshot',pick(snap.version))}
+        </div>
       </div>
+
+      <details class="snapshot-section">
+        <summary style="cursor:pointer;font-weight:800;">Ver dados técnicos completos do snapshot</summary>
+        <pre class="snapshot-pre" style="margin-top:10px;">${escapeHtml(JSON.stringify(snap,null,2))}</pre>
+      </details>
     `;
   }catch(error){
     console.error('Erro ao carregar snapshot:',error);
