@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Filiais — Central de Auditoria Nissei</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f7fa}
   .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,.05)}
@@ -165,7 +166,7 @@ async function buscarFilial(){
   const filialResult=await supabaseClient
     .from('filiais')
     .select('*')
-    .eq('numero',numero)
+    .eq('codigo',Number(numero))
     .maybeSingle();
 
   if(filialResult.error){
@@ -186,15 +187,15 @@ async function buscarFilial(){
 }
 
 function renderFilial(f){
-  $('filialTitulo').textContent=`Filial ${f.numero || ''}`;
-  $('filialNome').textContent=f.nome || 'Nome não informado';
+  $('filialTitulo').textContent=`Filial ${f.codigo ?? ''}`;
+  $('filialNome').textContent=f.nome_atual || 'Nome não informado';
   $('gestorAtual').textContent=f.gestor_nome
     ? `${f.gestor_nome}${f.gestor_matricula ? ' — '+f.gestor_matricula : ''}`
     : '—';
   $('auditorAtual').textContent=f.auditor_ultimo_balanco_nome
     ? `${f.auditor_ultimo_balanco_nome}${f.auditor_ultimo_balanco_matricula ? ' — '+f.auditor_ultimo_balanco_matricula : ''}`
     : '—';
-  $('ultimaAtualizacao').textContent=formatDate(f.ultima_atualizacao);
+  $('ultimaAtualizacao').textContent=formatDate(f.ultima_atualizacao || f.atualizado_em || f.atualizado_em);
 }
 
 async function carregarHistorico(f){
@@ -212,7 +213,7 @@ async function carregarHistorico(f){
     return;
   }
 
-  const numero=String(f.numero);
+  const numero=String(f.codigo);
   const relatorios=(result.data||[]).filter(r=>{
     const snap=r.snapshot || {};
     const entrada=snap.entrada || {};
@@ -287,7 +288,7 @@ async function carregarHistorico(f){
 
 function abrirModalExclusao(){
   if(!currentFilial || currentProfile?.perfil!=='admin') return;
-  $('modalTexto').textContent=`A filial ${currentFilial.numero}${currentFilial.nome ? ' — '+currentFilial.nome : ''} será removida do cadastro atual. Os Relatórios de Perdas e seus históricos NÃO serão excluídos.`;
+  $('modalTexto').textContent=`A filial ${currentFilial.codigo}${currentFilial.nome_atual ? ' — '+currentFilial.nome_atual : ''} será removida do cadastro atual. Os Relatórios de Perdas e seus históricos NÃO serão excluídos.`;
   $('modal').classList.remove('hidden');
   $('modal').classList.add('flex');
 }
@@ -329,7 +330,11 @@ $('excluirBtn').addEventListener('click',abrirModalExclusao);
 $('cancelarExclusao').addEventListener('click',fecharModal);
 $('confirmarExclusao').addEventListener('click',excluirFilial);
 $('logoutBtn').addEventListener('click',()=>{
-  window.location.href='../../central/';
+  if (document.referrer && history.length > 1) {
+    history.back();
+  } else {
+    window.location.href = '../../central/index.html';
+  }
 });
 
 (async()=>{
