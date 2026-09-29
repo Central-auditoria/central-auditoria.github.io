@@ -14,6 +14,28 @@
   .btn-danger{background:#fee2e2;color:#b91c1c}.btn-danger:hover{background:#fecaca}
   .muted{color:#64748b}
   .pill{display:inline-flex;align-items:center;border-radius:999px;padding:.25rem .65rem;font-size:.75rem;font-weight:800}
+
+  .hidden{display:none!important}
+  .history-row{display:grid;grid-template-columns:1.1fr 1fr 1fr .9fr auto;gap:10px;align-items:center;padding:14px 0;border-bottom:1px solid #e5e7eb}
+  .history-row:last-child{border-bottom:0}
+  .history-muted{color:#64748b;font-size:13px}
+  .snapshot-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px}
+  .snapshot-box{border:1px solid #e2e8f0;border-radius:12px;padding:12px;background:#f8fafc}
+  .snapshot-label{display:block;color:#64748b;font-size:12px;margin-bottom:4px}
+  .snapshot-value{font-weight:700;word-break:break-word}
+  .snapshot-section{margin-top:18px}
+  .snapshot-section h3{margin:0 0 10px}
+  .snapshot-pre{white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;line-height:1.5}
+  .modal{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px}
+  .modal-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.62)}
+  .modal-card{position:relative;width:min(980px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.28);padding:24px}
+  .modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+  @media(max-width:760px){
+    .history-row{grid-template-columns:1fr}
+    .snapshot-grid{grid-template-columns:1fr}
+    .modal-head{flex-direction:column}
+  }
+
 </style>
 </head>
 <body class="min-h-screen">
@@ -83,6 +105,21 @@
     </div>
   </section>
 </main>
+
+<div id="snapshotModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-backdrop" data-close-snapshot></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h2 id="snapshotTitulo" style="margin:0;">Snapshot do Relatório</h2>
+        <p id="snapshotSubtitulo" style="margin:6px 0 0;color:#64748b;"></p>
+      </div>
+      <button type="button" class="btn secondary" data-close-snapshot>Fechar</button>
+    </div>
+    <div id="snapshotConteudo" class="snapshot-content"></div>
+  </div>
+</div>
+
 
 <div id="modal" class="hidden fixed inset-0 bg-slate-900/50 z-50 items-center justify-center p-4">
   <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
@@ -275,6 +312,9 @@ async function carregarHistorico(f){
                 ${enc.checklist_facil && enc.checklist_facil_descricao ? `<div class="text-sm text-slate-600 mt-1">${escapeHtml(enc.checklist_facil_descricao)}</div>` : ''}
               </div>
             </div>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <button type="button" class="btn secondary" onclick="abrirSnapshot('${escapeHtml(r.id)}')">Ver snapshot completo</button>
+            </div>
             <div class="text-xs text-slate-500 mt-3">Encerrado em ${escapeHtml(formatDate(enc.registrado_em))}</div>
           </div>
         ` : `
@@ -347,6 +387,109 @@ $('logoutBtn').addEventListener('click',()=>{
     setStatus('Erro ao iniciar o módulo Filiais: '+(error?.message || error),true);
   }
 })();
+
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g,ch=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+  }[ch]));
+}
+
+async function abrirSnapshot(reportId){
+  const modal=document.getElementById('snapshotModal');
+  const titulo=document.getElementById('snapshotTitulo');
+  const subtitulo=document.getElementById('snapshotSubtitulo');
+  const conteudo=document.getElementById('snapshotConteudo');
+  if(!modal || !reportId) return;
+
+  titulo.textContent='Snapshot do Relatório de Perdas';
+  subtitulo.textContent='Carregando...';
+  conteudo.innerHTML='<div class="history-muted">Carregando snapshot...</div>';
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden','false');
+
+  try{
+    const {data,error}=await supabaseClient
+      .from('relatorios_perdas')
+      .select('id,status,created_at,finalized_at,snapshot')
+      .eq('id',reportId)
+      .single();
+
+    if(error) throw error;
+
+    const snap=data.snapshot ?? {};
+    const pick=(...values)=>{
+      for(const v of values){
+        if(v!==undefined && v!==null && String(v).trim()!=='') return v;
+      }
+      return '—';
+    };
+
+    const entrada=snap.entrada ?? {};
+    const filialCodigo=pick(entrada.filial_numero,entrada.codigo_filial,snap.filial_numero,snap.codigo_filial);
+    const filialNome=pick(entrada.filial_nome,entrada.nome_filial,snap.filial_nome,snap.nome_filial);
+    const gestor=pick(entrada.gestor,snap.gestor_nome,snap.gestor?.nome);
+    const gestorMat=pick(entrada.gestor_matricula,snap.gestor_matricula,snap.gestor?.matricula);
+    const auditor=pick(entrada.auditor,snap.auditor_nome,snap.auditor?.nome);
+    const auditorMat=pick(entrada.auditor_matricula,snap.auditor_matricula,snap.auditor?.matricula);
+
+    titulo.textContent='Snapshot do Relatório de Perdas';
+    subtitulo.textContent=`Relatório ${data.id || '—'} • ${data.status || '—'}`;
+
+    conteudo.innerHTML=`
+      <div class="snapshot-grid">
+        ${snapshotBox('Filial', `${filialCodigo} — ${filialNome}`)}
+        ${snapshotBox('Data do relatório', pick(entrada.data,snap.data_relatorio,snap.data,data.created_at))}
+        ${snapshotBox('Gestor', `${gestor} — ${gestorMat}`)}
+        ${snapshotBox('Auditor', `${auditor} — ${auditorMat}`)}
+        ${snapshotBox('Faturamento', pick(snap.faturamento,snap.faturamento_total,entrada.faturamento))}
+        ${snapshotBox('Total de falta', pick(snap.total_falta,snap.falta_total,snap.totalFalta))}
+        ${snapshotBox('Total de sobra', pick(snap.total_sobra,snap.sobra_total,snap.totalSobra))}
+        ${snapshotBox('Indicador operacional', pick(snap.indicador_operacional,snap.indicadorOperacional))}
+        ${snapshotBox('Resultado final', pick(snap.resultado_final,snap.resultadoFinal))}
+        ${snapshotBox('Perda líquida', pick(snap.perda_liquida,snap.perdaLiquida))}
+      </div>
+
+      ${snapshotSection('Entrada do relatório',entrada)}
+      ${snapshotSection('Intercorrências',pick(snap.intercorrencias,snap.intercorrencia))}
+      ${snapshotSection('Encerramento',pick(snap.encerramento,snap.observacoes_encerramento))}
+      ${snapshotSection('Medidas disciplinares',pick(snap.medidas_disciplinares,snap.medida_disciplinar,snap.medidasDisciplinares))}
+
+      <div class="snapshot-section">
+        <h3>Snapshot completo</h3>
+        <pre class="snapshot-pre">${escapeHtml(JSON.stringify(snap,null,2))}</pre>
+      </div>
+    `;
+  }catch(error){
+    console.error('Erro ao carregar snapshot:',error);
+    conteudo.innerHTML=`<div class="history-muted" style="color:#b91c1c;">Erro ao carregar o snapshot: ${escapeHtml(error.message || String(error))}</div>`;
+    subtitulo.textContent='Não foi possível carregar o snapshot.';
+  }
+}
+
+function snapshotBox(label,value){
+  return `<div class="snapshot-box"><span class="snapshot-label">${escapeHtml(label)}</span><span class="snapshot-value">${escapeHtml(value)}</span></div>`;
+}
+
+function snapshotSection(title,value){
+  if(value==='—' || value===null || value===undefined || String(value).trim()==='') return '';
+  const text=typeof value==='object' ? JSON.stringify(value,null,2) : String(value);
+  return `<div class="snapshot-section"><h3>${escapeHtml(title)}</h3><div class="snapshot-pre">${escapeHtml(text)}</div></div>`;
+}
+
+function fecharSnapshot(){
+  const modal=document.getElementById('snapshotModal');
+  if(!modal) return;
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden','true');
+}
+
+document.addEventListener('click',event=>{
+  if(event.target.matches('[data-close-snapshot]')) fecharSnapshot();
+});
+document.addEventListener('keydown',event=>{
+  if(event.key==='Escape') fecharSnapshot();
+});
+
 </script>
 </body>
 </html>
