@@ -732,7 +732,7 @@ async function openReportsModal(){
   await loadMyReports();
 }
 
-async async function openSavedReport(id){
+async function openSavedReport(id){
   if(!id) return;
   $('status').textContent='Abrindo relatório…';
   const user=await ensureAuthenticated();
@@ -1242,7 +1242,7 @@ function renderBlank(){
 
 $('saveReport').addEventListener('click',saveReport);$('finalizeReport').addEventListener('click',finalizeReport);$('openReports').addEventListener('click',openReportsModal);$('closeReports').addEventListener('click',closeReportsModal);$('refreshReports').addEventListener('click',loadMyReports);$('reportsModal').addEventListener('click',e=>{if(e.target===$('reportsModal'))closeReportsModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeReportsModal()});
 $('export').addEventListener('click',exportJpeg);$('share').addEventListener('click',shareJpeg);$('exportCurrentXlsx').addEventListener('click',exportCurrentDivergenciasXlsx);$('exportPdf').addEventListener('click',exportPainelPdf);$('emailBtn').addEventListener('click',openEmailModal);$('closeEmail').addEventListener('click',closeEmailModal);$('cancelEmail').addEventListener('click',closeEmailModal);$('sendEmail').addEventListener('click',()=>{ sendEmailReport(); });$('emailModal').addEventListener('click',e=>{if(e.target.id==='emailModal')closeEmailModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeEmailModal()});
-$('reset').addEventListener('click',()=>{closeReportsModal();baseAtual=[];baseAnterior=[];['filial','gestor','auditor','cicloAtual','cicloAnt','fatAtual','indAtual','fatAnt','indAnt','resAntInput'].forEach(id=>$(id).value='');$('meta').value='0,60%';$('baseAtualStatus').textContent='';$('baseAntStatus').textContent='';$('baseAtualPaste').value='';$('baseAntPaste').value='';nav('p1');$('status').textContent='Preencha os dados e importe as duas bases Procfit.';render({filial:'—',gestor:'—',matriculaGestor:'',auditor:'—',cicloAtual:'—',cicloAnt:'—',fatAtual:0,fatAnt:0,indAtual:0,indAnt:0,resAtual:0,perdaLiquidaAtual:0,resAnt:0,meta:.006,falta:0,sobra:0,geral:0,setores:[],faltas:[],sobras:[]});renderAnalysis();reportStatus='em_andamento';finalizedSnapshot=null;reportId=null;currentUser=null;currentRole=null;reportReadOnlyOverride=false;applyReportMode()});
+$('reset').addEventListener('click',()=>{closeReportsModal();reportReadOnlyOverride=false;reportStatus='em_andamento';reportId=null;finalizedSnapshot=null;try{window.history.replaceState({},document.title,window.location.pathname)}catch(e){}baseAtual=[];baseAnterior=[];['filial','gestor','auditor','cicloAtual','cicloAnt','fatAtual','indAtual','fatAnt','indAnt','resAntInput'].forEach(id=>$(id).value='');$('meta').value='0,60%';$('baseAtualStatus').textContent='';$('baseAntStatus').textContent='';$('baseAtualPaste').value='';$('baseAntPaste').value='';nav('p1');$('status').textContent='Preencha os dados e importe as duas bases Procfit.';render({filial:'—',gestor:'—',matriculaGestor:'',auditor:'—',cicloAtual:'—',cicloAnt:'—',fatAtual:0,fatAnt:0,indAtual:0,indAnt:0,resAtual:0,perdaLiquidaAtual:0,resAnt:0,meta:.006,falta:0,sobra:0,geral:0,setores:[],faltas:[],sobras:[]});renderAnalysis();currentUser=null;currentRole=null;applyReportMode()});
 render({filial:'—',gestor:'—',matriculaGestor:'',auditor:'—',cicloAtual:'—',cicloAnt:'—',fatAtual:0,fatAnt:0,indAtual:0,indAnt:0,resAtual:0,resAnt:0,meta:.006,falta:0,sobra:0,geral:0,setores:[],faltas:[],sobras:[]});renderAnalysis();applyReportMode();
 
 // Permite abrir um relatório salvo diretamente pelo módulo Filiais,
