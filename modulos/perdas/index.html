@@ -533,7 +533,7 @@ function render(d){
   </div>
   <div class="meta"><div class="branch">FILIAL ${esc(d.filial)}</div><div class="small">Gestor: ${esc(d.gestor)}${d.matriculaGestor ? " &nbsp;•&nbsp; Matrícula: "+esc(d.matriculaGestor) : ""} &nbsp;•&nbsp; Auditor: ${esc(d.auditor)}</div>
     <div class="cycle"><b>Ciclo: ${esc(d.cicloAtual)}</b><span>Ciclo: ${esc(d.cicloAnt)}</span></div></div>
-  <div class="main-result ${d.resAtual<=d.meta?'within-meta':''}"><div class="label">RESULTADO FINAL</div><div class="big">${pct(d.resAtual)}</div><div class="result-meta">Meta ${pct(d.meta)} &nbsp;•&nbsp; }</div>
+  <div class="main-result ${d.resAtual<=d.meta?'within-meta':''}"><div class="label">RESULTADO FINAL</div><div class="big">${pct(d.resAtual)}</div><div class="result-meta">Meta ${pct(d.meta)} &nbsp;•&nbsp; </div>
     <div class="pill">${d.resAtual>d.meta?'ACIMA DA META':'DENTRO DA META'}</div>
     <div class="prev">Ciclo anterior<strong>${pct(d.resAnt)}</strong><em style="color:${corMelhoria(vr)}">${pp(vr)} &nbsp;•&nbsp; ${vr>0?'piora':vr<0?'melhora':'sem alteração'}</em></div></div>
   <div class="section-title">COMPOSIÇÃO DO RESULTADO</div>
