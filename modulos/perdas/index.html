@@ -521,8 +521,7 @@ function aggregate(base){const m=new Map();for(const r of base){const k=norm(r.p
 // Fórmula original da planilha: ((valor monetário do indicador operacional + falta + sobra) * 100) / faturamento.
 function calc(fat,ind,base){const falta=base.reduce((s,r)=>s+r.falta,0),sobra=base.reduce((s,r)=>s+r.sobra,0),geral=falta+sobra;const valorIndicadorOperacional=Number(fat||0)*Number(ind||0);const resultadoMonetario=valorIndicadorOperacional+geral;const res=fat?(resultadoMonetario/fat):0;const perdaLiquida=fat?(Number(ind||0)+((falta-sobra)/Number(fat))):0;return{falta,sobra,geral,valorIndicadorOperacional,resultadoMonetario,res,perdaLiquida}}
 function render(d){
-  const desvio=d.resAtual-d.meta, vr=d.resAtual-d.resAnt;
-  const vi=d.indAtual-d.indAnt;
+   const vi=d.indAtual-d.indAnt;
   const corMelhoria=v=>v<0?'var(--green)':v>0?'var(--red)':'var(--muted)';
   const maxS=Math.max(...d.setores.map(x=>x[1]),1);
   const list=(arr,kind)=>arr.map((x,i)=>`<div class="item"><span>${String(i+1).padStart(2,'0')}</span><span>${esc(x[0])}</span><span title="${esc(x[1])}">${esc(x[1])}</span><span class="v">${brl(x[3])}</span></div>`).join('');
