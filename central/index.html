@@ -207,6 +207,10 @@
           <span class="nav-icon">♙</span>
           <span>Gestores</span>
         </a>
+        <a class="nav-item admin-central-link" id="adminNavLink" href="../modulos/admin/" style="display:none">
+          <span class="nav-icon">⚙</span>
+          <span>Administração</span>
+        </a>
       </nav>
 
       <div class="sidebar-bottom">
@@ -296,6 +300,16 @@
             <h3>Gestores</h3>
             <p>Cadastro, identificação por matrícula e histórico dos gestores.</p>
             <span class="card-status">Estrutura preparada</span>
+          </a>
+
+          <a class="module-card navy" id="adminModuleCard" href="../modulos/admin/" style="display:none">
+            <div class="card-top">
+              <span class="module-icon">⚙</span>
+              <span class="card-arrow">→</span>
+            </div>
+            <h3>Administração</h3>
+            <p>Correção de cadastros, consulta de relatórios e histórico administrativo.</p>
+            <span class="card-status">Acesso restrito a administradores</span>
           </a>
         </section>
 
@@ -470,6 +484,14 @@
       currentUser = user;
       currentProfile = profile;
       currentRole = profile.perfil;
+
+      // O acesso aparece na interface somente para perfis administrativos.
+      // A página do módulo também valida o perfil no Supabase.
+      const isAdmin = currentRole === "admin";
+      const adminNavLink = $("adminNavLink");
+      const adminModuleCard = $("adminModuleCard");
+      if (adminNavLink) adminNavLink.style.display = isAdmin ? "" : "none";
+      if (adminModuleCard) adminModuleCard.style.display = isAdmin ? "" : "none";
 
       $("accountNameInput").value = profile.nome || "";
       $("accountEmail").textContent = profile.email || user.email || "—";
