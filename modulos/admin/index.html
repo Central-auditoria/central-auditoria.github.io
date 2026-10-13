@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Administração — Central de Auditoria Nissei</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--navy:#092c4c;--blue:#075b8f;--bg:#f3f6fa;--line:#dce5ee;--muted:#617286;--green:#137547;--red:#b42318}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#182b3c}
+header{background:linear-gradient(120deg,#062b49,#075b8f);color:#fff;padding:22px max(20px,calc((100% - 1220px)/2));display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.kicker{font-size:11px;letter-spacing:.15em;text-transform:uppercase;opacity:.8;font-weight:800}h1{margin:4px 0;font-size:27px}header p{margin:0;opacity:.8}.head-actions{display:flex;gap:8px;flex-wrap:wrap}
+main{max-width:1220px;margin:26px auto;padding:0 18px 50px}.notice{border:1px solid #f1d69b;background:#fff8e7;color:#76551a;padding:12px 15px;border-radius:12px;margin-bottom:16px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}.tab{border:1px solid var(--line);background:#fff;color:var(--navy);padding:10px 14px;border-radius:10px;font-weight:800;cursor:pointer}.tab.active{background:var(--navy);color:#fff}
+.panel,.stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 7px 22px #0b2e4b08}.panel h2{margin:0 0 5px;color:var(--navy)}.muted{color:var(--muted);font-size:13px}.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}.span12{grid-column:span 12}.span8{grid-column:span 8}.span6{grid-column:span 6}.span4{grid-column:span 4}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}.stat small{display:block;color:var(--muted);font-weight:700}.stat strong{display:block;font-size:25px;color:var(--navy);margin-top:4px}
+label{display:block;font-size:12px;font-weight:800;color:#3b5063;margin:12px 0 5px}input,select,textarea{font:inherit;width:100%;border:1px solid #cbd7e2;border-radius:9px;padding:10px 11px;background:#fff;color:#172b3b}textarea{min-height:76px;resize:vertical}.row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.row>*{flex:1;min-width:150px}
+button{font:inherit}.btn{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:9px;padding:10px 13px;font-weight:800;cursor:pointer}.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}.btn.danger{color:var(--red);border-color:#f2c8c8}.btn:disabled{opacity:.5;cursor:not-allowed}
+.table-wrap{overflow:auto;margin-top:14px;border:1px solid var(--line);border-radius:10px}table{border-collapse:collapse;width:100%;min-width:750px;background:#fff}th,td{text-align:left;padding:11px 12px;border-bottom:1px solid #e8edf2;font-size:13px;vertical-align:top}th{background:#f6f9fc;color:#526579;font-size:11px;text-transform:uppercase;letter-spacing:.04em}tr:last-child td{border-bottom:0}.status{margin:12px 0;padding:10px 12px;border-radius:9px;display:none;white-space:pre-wrap}.status.ok{display:block;background:#e8f7ee;color:var(--green)}.status.err{display:block;background:#fff0f0;color:var(--red)}.status.info{display:block;background:#eaf4fb;color:#075b8f}.hidden{display:none!important}.pill{display:inline-block;border-radius:99px;background:#e8f2f9;color:#075b8f;padding:3px 8px;font-size:11px;font-weight:800}.actions{display:flex;gap:6px;flex-wrap:wrap}.json{white-space:pre-wrap;max-width:550px;word-break:break-word;font:12px ui-monospace,monospace}.small{font-size:12px}.foot{margin-top:18px;color:var(--muted);font-size:12px}
+@media(max-width:720px){.stats{grid-template-columns:1fr}.span8,.span6,.span4{grid-column:span 12}header{padding:18px}h1{font-size:23px}}
+</style></head>
+<body>
+<header><div><div class="kicker">Central de Auditoria Nissei</div><h1>Administração da Central</h1><p>Cadastros, relatórios, usuários e trilha de alterações</p></div><div class="head-actions"><button class="btn" id="backBtn">← Voltar à Central</button><button class="btn" id="logoutBtn">Sair</button></div></header>
+<main>
+<div id="status" class="status info">Verificando sessão…</div>
+<div id="blocked" class="panel hidden"><h2>Acesso restrito</h2><p>Esta página exige uma sessão válida e perfil <b>admin</b>. Entre pela Central de Auditoria e tente novamente.</p><button class="btn primary" id="goCentral">Ir para a Central</button></div>
+<div id="app" class="hidden">
+<div class="notice"><b>Proteção de histórico:</b> esta página altera somente o cadastro atual de filiais. Snapshots e relatórios históricos não são regravados. Toda correção exige motivo e tenta registrar a alteração em <code>admin_audit_log</code>.</div>
+<div class="stats"><div class="stat"><small>Filiais cadastradas</small><strong id="statBranches">—</strong></div><div class="stat"><small>Relatórios encontrados</small><strong id="statReports">—</strong></div><div class="stat"><small>Usuários internos</small><strong id="statUsers">—</strong></div></div>
+<div class="tabs"><button class="tab active" data-tab="branches">Filiais</button><button class="tab" data-tab="reports">Relatórios</button><button class="tab" data-tab="users">Usuários</button><button class="tab" data-tab="audit">Histórico administrativo</button></div>
+<section id="tab-branches" class="panel">
+<h2>Correção de filiais</h2><p class="muted">Pesquise pelo código ou nome. Os campos são preenchidos a partir do cadastro atual.</p>
+<div class="row"><div><label for="branchSearch">Buscar filial</label><input id="branchSearch" placeholder="Código ou nome da filial"></div><button class="btn primary" id="searchBranch">Buscar</button><button class="btn" id="loadBranches">Listar filiais</button></div>
+<div id="branchResults" class="table-wrap hidden"></div>
+<div id="branchEditor" class="hidden">
+<hr><h3 id="branchTitle">Editar filial</h3><input type="hidden" id="branchId"><div class="grid">
+<div class="span4"><label>Código (identificador)</label><input id="branchCode" disabled></div><div class="span8"><label>Nome atual</label><input id="branchName"></div>
+<div class="span6"><label>Nome do gestor</label><input id="managerName"></div><div class="span6"><label>Matrícula do gestor</label><input id="managerMat"></div>
+<div class="span6"><label>Auditor do último balanço</label><input id="auditorName"></div><div class="span6"><label>Matrícula do auditor</label><input id="auditorMat"></div>
+<div class="span12"><label>Motivo obrigatório da correção</label><textarea id="branchReason" placeholder="Ex.: correção de dados de teste conforme relatório finalizado de 25/09/2026"></textarea></div>
+<div class="span12 actions"><button class="btn primary" id="saveBranch">Salvar correção</button><button class="btn" id="cancelBranch">Cancelar</button></div></div></div>
+</section>
+<section id="tab-reports" class="panel hidden"><h2>Consulta de relatórios</h2><p class="muted">Consulta administrativa; relatórios e snapshots são exibidos sem edição.</p><div class="row"><div><label>Filtrar por filial, gestor ou auditor</label><input id="reportSearch" placeholder="Digite para filtrar"></div><div><label>Status</label><select id="reportStatus"><option value="">Todos</option><option value="em_andamento">Em andamento</option><option value="finalizado">Finalizado</option></select></div><button class="btn primary" id="loadReports">Atualizar relatórios</button></div><div id="reportResults" class="table-wrap"></div></section>
+<section id="tab-users" class="panel hidden"><h2>Usuários internos</h2><p class="muted">A lista usa a tabela profiles. Alterações de perfil dependem das políticas RLS já existentes.</p><button class="btn primary" id="loadUsers">Atualizar usuários</button><div id="userResults" class="table-wrap"></div></section>
+<section id="tab-audit" class="panel hidden"><h2>Histórico administrativo</h2><p class="muted">Exibe correções registradas nesta ferramenta. Primeiro execute o SQL de preparação incluído no pacote.</p><button class="btn primary" id="loadAudit">Atualizar histórico</button><div id="auditResults" class="table-wrap"></div></section>
+<div class="foot">Versão inicial independente. Usa a mesma URL/chave pública Supabase e a sessão compartilhada no mesmo domínio. A chave pública não substitui RLS.</div>
+</div></main>
+<script>
+const SUPABASE_URL='https://skfpqaxbypryztznakke.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_Cdgo8O0bLb1Jd1uTuhlp1A_qTJpbbXj';
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const $=id=>document.getElementById(id);let currentUser=null,currentProfile=null,branches=[],reports=[],users=[];
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function showStatus(msg,type='info'){const e=$('status');e.textContent=msg;e.className='status '+type;}
+function fmtDate(v){if(!v)return '—';const d=new Date(v);return isNaN(d)?'—':d.toLocaleString('pt-BR');}
+function goCentral(){location.href='/';}
+$('goCentral').onclick=goCentral;$('backBtn').onclick=goCentral;
+$('logoutBtn').onclick=async()=>{await supabaseClient.auth.signOut();goCentral();};
+async function init(){try{
+ const {data:{user},error}=await supabaseClient.auth.getUser();if(error)throw error;if(!user){$('blocked').classList.remove('hidden');showStatus('Sessão não encontrada. Entre pela Central.','err');return;}
+ const {data:profile,error:pe}=await supabaseClient.from('profiles').select('user_id,nome,email,perfil').eq('user_id',user.id).maybeSingle();if(pe)throw pe;
+ if(profile?.perfil!=='admin'){$('blocked').classList.remove('hidden');showStatus('Seu perfil não possui permissão administrativa.','err');return;}
+ currentUser=user;currentProfile=profile;$('app').classList.remove('hidden');showStatus('Sessão validada: '+(profile.nome||user.email)+' · Administrador','ok');
+ await Promise.all([loadBranches(),loadReports(),loadUsers()]);
+ }catch(e){$('blocked').classList.remove('hidden');showStatus('Não foi possível validar o acesso: '+e.message,'err');}}
+function setTab(tab){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));['branches','reports','users','audit'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));if(tab==='audit')loadAudit();}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+async function loadBranches(){try{const {data,error}=await supabaseClient.from('filiais').select('id,codigo,nome_atual,nome_anterior,nome_atualizado_em,gestor_nome,gestor_matricula,auditor_ultimo_balanco_nome,auditor_ultimo_balanco_matricula,ultimo_relatorio_id,atualizado_em').order('codigo');if(error)throw error;branches=data||[];$('statBranches').textContent=branches.length;renderBranchResults(branches);}catch(e){showStatus('Erro ao carregar filiais: '+e.message,'err');}}
+function renderBranchResults(list){$('branchResults').classList.remove('hidden');$('branchResults').innerHTML=`<table><thead><tr><th>Código</th><th>Filial</th><th>Gestor</th><th>Auditor</th><th></th></tr></thead><tbody>${list.slice(0,200).map(b=>`<tr><td>${esc(b.codigo)}</td><td>${esc(b.nome_atual)}</td><td>${esc(b.gestor_nome||'—')}<br><span class="muted">${esc(b.gestor_matricula||'')}</span></td><td>${esc(b.auditor_ultimo_balanco_nome||'—')}<br><span class="muted">${esc(b.auditor_ultimo_balanco_matricula||'')}</span></td><td><button class="btn" data-edit-branch="${esc(b.id)}">Editar</button></td></tr>`).join('')}</tbody></table>${list.length>200?'<p class="muted">Exibindo as primeiras 200 filiais. Refine a busca.</p>':''}`;
+ document.querySelectorAll('[data-edit-branch]').forEach(btn=>btn.onclick=()=>editBranch(btn.dataset.editBranch));}
+$('searchBranch').onclick=()=>{const q=$('branchSearch').value.trim().toLocaleLowerCase('pt-BR');renderBranchResults(branches.filter(b=>String(b.codigo).includes(q)||(b.nome_atual||'').toLocaleLowerCase('pt-BR').includes(q)));};
+$('loadBranches').onclick=loadBranches;
+function editBranch(id){const b=branches.find(x=>x.id===id);if(!b)return;$('branchId').value=b.id;$('branchCode').value=b.codigo;$('branchTitle').textContent='Editar filial '+b.codigo+' — '+(b.nome_atual||'');$('branchName').value=b.nome_atual||'';$('managerName').value=b.gestor_nome||'';$('managerMat').value=b.gestor_matricula||'';$('auditorName').value=b.auditor_ultimo_balanco_nome||'';$('auditorMat').value=b.auditor_ultimo_balanco_matricula||'';$('branchReason').value='';$('branchEditor').classList.remove('hidden');$('branchEditor').scrollIntoView({behavior:'smooth',block:'start'});}
+$('cancelBranch').onclick=()=> $('branchEditor').classList.add('hidden');
+$('saveBranch').onclick=async()=>{const id=$('branchId').value,b=branches.find(x=>x.id===id),reason=$('branchReason').value.trim();if(!b)return;if(reason.length<8){showStatus('Informe um motivo com pelo menos 8 caracteres.','err');return;}
+const patch={nome_atual:$('branchName').value.trim(),gestor_nome:$('managerName').value.trim()||null,gestor_matricula:$('managerMat').value.trim()||null,auditor_ultimo_balanco_nome:$('auditorName').value.trim()||null,auditor_ultimo_balanco_matricula:$('auditorMat').value.trim()||null,atualizado_em:new Date().toISOString()};
+if(!patch.nome_atual){showStatus('O nome da filial não pode ficar vazio.','err');return;}
+if(!confirm('Confirmar correção do cadastro atual da filial '+b.codigo+'? O histórico dos relatórios não será alterado.'))return;
+const btn=$('saveBranch');btn.disabled=true;try{
+const {error}=await supabaseClient.from('filiais').update(patch).eq('id',id);if(error)throw error;
+const log={actor_user_id:currentUser.id,actor_email:currentUser.email,acao:'UPDATE_FILIAL',entidade:'filiais',entidade_id:String(b.codigo),motivo:reason,antes:{codigo:b.codigo,nome_atual:b.nome_atual,gestor_nome:b.gestor_nome,gestor_matricula:b.gestor_matricula,auditor_ultimo_balanco_nome:b.auditor_ultimo_balanco_nome,auditor_ultimo_balanco_matricula:b.auditor_ultimo_balanco_matricula},depois:patch};
+const {error:le}=await supabaseClient.from('admin_audit_log').insert(log);
+if(le){showStatus('Cadastro atualizado, mas o histórico administrativo NÃO foi gravado. Execute o SQL do pacote e depois registre esta correção manualmente: '+le.message,'err');}else showStatus('Cadastro corrigido e alteração registrada no histórico administrativo.','ok');
+$('branchEditor').classList.add('hidden');await loadBranches();
+}catch(e){showStatus('Não foi possível salvar: '+e.message,'err');}finally{btn.disabled=false;}};
+async function loadReports(){try{const {data,error}=await supabaseClient.from('relatorios_perdas').select('id,created_by,created_at,updated_at,finalized_at,status,filial,gestor,matricula_gestor,ciclo_atual,ciclo_anterior,snapshot').order('created_at',{ascending:false}).limit(500);if(error)throw error;reports=data||[];$('statReports').textContent=reports.length;renderReports();}catch(e){$('reportResults').innerHTML='<p class="muted">Falha ao consultar relatórios: '+esc(e.message)+'</p>';}}
+$('loadReports').onclick=loadReports;$('reportSearch').oninput=renderReports;$('reportStatus').onchange=renderReports;
+function renderReports(){const q=$('reportSearch').value.toLocaleLowerCase('pt-BR'),st=$('reportStatus').value;const list=reports.filter(r=>{const auditor=r?.snapshot?.entrada?.auditor||'';return(!st||r.status===st)&&[r.filial,r.gestor,auditor,r.matricula_gestor].some(v=>String(v||'').toLocaleLowerCase('pt-BR').includes(q));});$('reportResults').innerHTML=`<table><thead><tr><th>Filial</th><th>Status</th><th>Gestor</th><th>Auditor do snapshot</th><th>Criador</th><th>Criado em</th><th></th></tr></thead><tbody>${list.map(r=>`<tr><td>${esc(r.filial||'—')}<br><span class="muted">${esc(r.ciclo_atual||'')}</span></td><td><span class="pill">${esc(r.status||'—')}</span></td><td>${esc(r.gestor||'—')}<br><span class="muted">${esc(r.matricula_gestor||'')}</span></td><td>${esc(r?.snapshot?.entrada?.auditor||'—')}</td><td>${esc(profileName(r.created_by))}</td><td>${esc(fmtDate(r.created_at))}</td><td><button class="btn" data-view-report="${esc(r.id)}">Ver snapshot</button></td></tr>`).join('')}</tbody></table>`;
+document.querySelectorAll('[data-view-report]').forEach(b=>b.onclick=()=>viewReport(b.dataset.viewReport));}
+function profileName(id){const u=users.find(x=>x.user_id===id);return u?`${u.nome||u.email||id}`:(id||'—');}
+function viewReport(id){const r=reports.find(x=>x.id===id);if(!r)return;alert('RELATÓRIO — SOMENTE CONSULTA\\n\\nFilial: '+(r.filial||'—')+'\\nStatus: '+(r.status||'—')+'\\nCriador: '+profileName(r.created_by)+'\\nCriado em: '+fmtDate(r.created_at)+'\\nFinalizado em: '+fmtDate(r.finalized_at)+'\\n\\nSNAPSHOT:\\n'+JSON.stringify(r.snapshot||{},null,2));}
+async function loadUsers(){try{const {data,error}=await supabaseClient.from('profiles').select('user_id,nome,email,perfil,criado_em,atualizado_em').order('nome');if(error)throw error;users=data||[];$('statUsers').textContent=users.length;renderUsers();renderReports();}catch(e){$('userResults').innerHTML='<p class="muted">Falha ao consultar usuários: '+esc(e.message)+'</p>';}}
+$('loadUsers').onclick=loadUsers;
+function renderUsers(){$('userResults').innerHTML=`<table><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>ID</th><th>Criado em</th></tr></thead><tbody>${users.map(u=>`<tr><td>${esc(u.nome||'—')}</td><td>${esc(u.email||'—')}</td><td><span class="pill">${esc(u.perfil||'auditor')}</span></td><td class="small">${esc(u.user_id)}</td><td>${esc(fmtDate(u.criado_em))}</td></tr>`).join('')}</tbody></table>`;}
+async function loadAudit(){try{const {data,error}=await supabaseClient.from('admin_audit_log').select('id,created_at,actor_email,acao,entidade,entidade_id,motivo,antes,depois').order('created_at',{ascending:false}).limit(300);if(error)throw error;$('auditResults').innerHTML=`<table><thead><tr><th>Data</th><th>Responsável</th><th>Ação</th><th>Entidade</th><th>Motivo</th><th>Antes / Depois</th></tr></thead><tbody>${(data||[]).map(x=>`<tr><td>${esc(fmtDate(x.created_at))}</td><td>${esc(x.actor_email||'—')}</td><td>${esc(x.acao)}</td><td>${esc(x.entidade)} ${esc(x.entidade_id)}</td><td>${esc(x.motivo)}</td><td><details><summary>Ver valores</summary><div class="json">ANTES\\n${esc(JSON.stringify(x.antes,null,2))}\\nDEPOIS\\n${esc(JSON.stringify(x.depois,null,2))}</div></details></td></tr>`).join('')}</tbody></table>`;}catch(e){$('auditResults').innerHTML='<p class="muted">Não foi possível ler o histórico. Verifique se executou o SQL de preparação. '+esc(e.message)+'</p>';}}
+$('loadAudit').onclick=loadAudit;
+init();
+</script></body></html>
