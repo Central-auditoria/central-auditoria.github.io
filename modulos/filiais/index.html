@@ -66,6 +66,24 @@
     <p id="status" class="text-sm mt-3 muted"></p>
   </section>
 
+  <section class="card p-5">
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4">
+      <div>
+        <h2 class="text-xl font-black text-slate-900">Todas as filiais cadastradas</h2>
+        <p class="text-sm muted mt-1">Selecione uma filial para abrir seus dados e o histórico de relatórios.</p>
+      </div>
+      <div class="text-sm font-bold text-slate-500"><span id="totalFiliais">0</span> filial(is)</div>
+    </div>
+    <label for="filtroFiliais" class="block text-sm font-bold text-slate-700 mb-2">Filtrar lista (opcional)</label>
+    <input id="filtroFiliais" type="search" autocomplete="off"
+      class="w-full rounded-xl border border-slate-300 px-4 py-3 mb-4 outline-none focus:ring-2 focus:ring-slate-400"
+      placeholder="Digite o código ou nome da filial">
+    <div id="listaFiliais" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div class="text-sm muted">Carregando filiais...</div>
+    </div>
+    <p id="statusListaFiliais" class="text-sm mt-3 muted" aria-live="polite"></p>
+  </section>
+
   <section id="resultado" class="hidden space-y-6">
     <div class="card p-6">
       <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -187,6 +205,60 @@ async function carregarUsuario(){
   $('userProfile').textContent = `${currentProfile.nome || ''} · ${currentProfile.perfil}`;
   if(currentProfile.perfil === 'admin') $('excluirBtn').classList.remove('hidden');
   return true;
+}
+
+let listaFiliaisCache = [];
+
+async function carregarListaFiliais(){
+  const container=$('listaFiliais');
+  container.innerHTML='<div class="text-sm muted">Carregando filiais...</div>';
+  $('statusListaFiliais').textContent='';
+
+  try{
+    const result=await supabaseClient
+      .from('filiais')
+      .select('codigo,nome_atual,gestor_nome,gestor_matricula')
+      .order('codigo',{ascending:true});
+
+    if(result.error) throw result.error;
+
+    listaFiliaisCache=result.data || [];
+    $('totalFiliais').textContent=listaFiliaisCache.length;
+    renderListaFiliais();
+  }catch(error){
+    container.innerHTML='<div class="text-sm text-red-600">Não foi possível carregar a lista de filiais.</div>';
+    $('statusListaFiliais').textContent=error?.message || String(error);
+    $('statusListaFiliais').className='text-sm mt-3 text-red-600';
+  }
+}
+
+function renderListaFiliais(){
+  const filtro=String($('filtroFiliais').value || '').trim().toLocaleLowerCase('pt-BR');
+  const filtradas=listaFiliaisCache.filter(f=>{
+    const texto=`${f.codigo ?? ''} ${f.nome_atual ?? ''}`.toLocaleLowerCase('pt-BR');
+    return texto.includes(filtro);
+  });
+
+  $('totalFiliais').textContent=listaFiliaisCache.length;
+  if(!filtradas.length){
+    $('listaFiliais').innerHTML='<div class="sm:col-span-2 lg:col-span-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">Nenhuma filial encontrada para esse filtro.</div>';
+    return;
+  }
+
+  $('listaFiliais').innerHTML=filtradas.map(f=>`
+    <button type="button"
+      class="text-left rounded-xl border border-slate-200 bg-white p-4 hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 transition"
+      data-filial-codigo="${escapeHtml(f.codigo)}">
+      <div class="flex items-start gap-3">
+        <span class="shrink-0 inline-flex items-center justify-center min-w-14 rounded-lg bg-slate-100 px-3 py-2 font-black text-slate-800">${escapeHtml(f.codigo)}</span>
+        <span class="min-w-0 flex-1">
+          <span class="block font-bold text-slate-900 break-words">${escapeHtml(f.nome_atual || 'Nome não informado')}</span>
+          <span class="block text-xs text-slate-500 mt-2">${f.gestor_nome ? 'Gestor: '+escapeHtml(f.gestor_nome) : 'Gestor não informado'}</span>
+        </span>
+        <span class="text-slate-400" aria-hidden="true">›</span>
+      </div>
+    </button>
+  `).join('');
 }
 
 async function buscarFilial(){
@@ -380,6 +452,14 @@ async function excluirFilial(){
 }
 
 $('buscarBtn').addEventListener('click',buscarFilial);
+$('filtroFiliais').addEventListener('input',renderListaFiliais);
+$('listaFiliais').addEventListener('click',event=>{
+  const botao=event.target.closest('[data-filial-codigo]');
+  if(!botao) return;
+  $('numeroFilial').value=botao.dataset.filialCodigo;
+  buscarFilial();
+  window.scrollTo({top:0,behavior:'smooth'});
+});
 $('numeroFilial').addEventListener('keydown',e=>{if(e.key==='Enter') buscarFilial();});
 $('excluirBtn').addEventListener('click',abrirModalExclusao);
 $('cancelarExclusao').addEventListener('click',fecharModal);
@@ -395,7 +475,10 @@ $('logoutBtn').addEventListener('click',()=>{
 (async()=>{
   try{
     const ok=await carregarUsuario();
-    if(ok) $('numeroFilial').focus();
+    if(ok){
+      $('numeroFilial').focus();
+      await carregarListaFiliais();
+    }
   }catch(error){
     console.error('Erro ao iniciar Filiais:',error);
     $('resultado').classList.add('hidden');
