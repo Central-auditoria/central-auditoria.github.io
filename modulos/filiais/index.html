@@ -314,7 +314,7 @@ async function carregarHistorico(f){
   // Isso preserva o histórico mesmo quando o cadastro atual do gestor muda.
   const result=await supabaseClient
     .from('relatorios_perdas')
-    .select('id,status,created_at,finalized_at,snapshot')
+    .select('id,status,created_at,finalized_at,snapshot,created_by')
     .order('created_at',{ascending:false});
 
   if(result.error){
@@ -330,6 +330,24 @@ async function carregarHistorico(f){
     const raw=String(valor).trim();
     return raw === numero || raw.startsWith(numero+' —') || raw.startsWith(numero+' -') || raw.startsWith(numero+' –');
   });
+
+  // Busca os nomes dos usuários criadores sem impedir a exibição do histórico
+  // caso a política de acesso (RLS) não permita consultar todos os profiles.
+  const userIds=[...new Set(relatorios.map(r=>r.created_by).filter(Boolean))];
+  const criadores=new Map();
+  if(userIds.length){
+    const perfisResult=await supabaseClient
+      .from('profiles')
+      .select('user_id,nome')
+      .in('user_id',userIds);
+    if(!perfisResult.error){
+      (perfisResult.data||[]).forEach(p=>{
+        if(p.user_id && p.nome) criadores.set(p.user_id,p.nome);
+      });
+    }else{
+      console.warn('Não foi possível consultar os nomes dos criadores dos relatórios:',perfisResult.error);
+    }
+  }
 
   $('contadorRelatorios').textContent=relatorios.length;
 
@@ -354,6 +372,8 @@ async function carregarHistorico(f){
     const snap=r.snapshot||{};
     const entrada=snap.entrada||{};
     const auditor=entrada.auditor || snap.auditor || '—';
+    const criadorNome=r.created_by ? criadores.get(r.created_by) : null;
+    const criadorLabel=criadorNome || (r.created_by ? `Usuário ID: ${r.created_by}` : 'Não registrado');
 
     // Primeiro usa o encerramento salvo no snapshot deste relatório.
     // Assim o histórico da filial mostra exatamente o encerramento que
@@ -375,6 +395,7 @@ async function carregarHistorico(f){
           <div>
             <div class="font-black text-slate-900">Relatório de Perdas</div>
             <div class="text-sm text-slate-600 mt-1">Auditor: ${escapeHtml(auditor)}</div>
+            <div class="text-sm text-slate-600">Criado por: ${escapeHtml(criadorLabel)}</div>
             <div class="text-sm text-slate-600">Criado: ${escapeHtml(formatDate(r.created_at))}</div>
             ${r.finalized_at ? `<div class="text-sm text-slate-600">Finalizado: ${escapeHtml(formatDate(r.finalized_at))}</div>` : ''}
           </div>
