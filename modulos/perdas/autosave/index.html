@@ -809,10 +809,13 @@ function reportListData(snapshot){
 function parseFilialCadastro(value){
   const raw=String(value||'').trim();
   if(!raw) return {numero:null,nome:null};
-  const parts=raw.split(/\s*[—–-]\s*/,2);
-  const numero=(parts[0]||'').trim();
-  const nome=(parts[1]||'').trim();
-  return {numero:numero || raw,nome:nome || null};
+  // O código é somente o trecho numérico inicial. O nome é tudo o que vem
+  // depois do primeiro separador, preservando hífens internos como "PR - ...".
+  const match=raw.match(/^\s*(\d+)\s*[-–—]\s*(.*?)\s*$/);
+  if(!match) return {numero:null,nome:null};
+  const numero=match[1].trim();
+  const nome=(match[2]||'').trim();
+  return {numero:numero || null,nome:nome || null};
 }
 
 async function syncFilialCadastro(reportId, snapshot){
