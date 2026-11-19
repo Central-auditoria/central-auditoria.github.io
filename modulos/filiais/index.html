@@ -310,11 +310,16 @@ function renderFilial(f){
 async function carregarHistorico(f){
   $('historico').innerHTML='<div class="text-sm muted">Carregando histórico...</div>';
 
-  // A busca do histórico usa o número da filial armazenado no snapshot.
-  // Isso preserva o histórico mesmo quando o cadastro atual do gestor muda.
+  // Filtra no próprio Supabase pelo código armazenado no snapshot.
+  // Antes, o módulo baixava TODOS os relatórios da empresa e só depois
+  // filtrava no navegador, tornando a abertura cada vez mais lenta.
+  // O prefixo contempla snapshots com "123", "123 - Nome" ou "123 — Nome".
+  const numero=String(f.codigo).trim();
+  const prefixo=`${numero}%`;
   const result=await supabaseClient
     .from('relatorios_perdas')
     .select('id,status,created_at,finalized_at,snapshot,created_by')
+    .or(`snapshot->entrada->>filial.ilike.${prefixo},snapshot->>filial.ilike.${prefixo}`)
     .order('created_at',{ascending:false});
 
   if(result.error){
@@ -322,7 +327,8 @@ async function carregarHistorico(f){
     return;
   }
 
-  const numero=String(f.codigo);
+  // Mantém a validação exata no navegador para impedir que, por exemplo,
+  // a filial 123 receba relatórios da filial 1234.
   const relatorios=(result.data||[]).filter(r=>{
     const snap=r.snapshot || {};
     const entrada=snap.entrada || {};
